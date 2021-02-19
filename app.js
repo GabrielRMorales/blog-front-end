@@ -1,26 +1,17 @@
 const { response } = require("express");
 const express= require("express");
 const app = express();
+const path = require("path");
 const port = 8080;
 const fetch = require("node-fetch");
 
 app.use(express.json());
 app.use(express.urlencoded({extended: false}));
+app.use(express.static(path.join(__dirname, "public")));
 
 app.get("/",async (req,res,next)=>{
-  /* fetch("http://localhost:3000")
-    .then(data=>data.json())
-    .then(d=>{
-        console.log(d)
-        res.send(d);
-    })
-    .catch(err=>console.log(err));*/
-    let postData = await fetch("http://localhost:3000")
-    postData= await postData.json();
-    res.send(postData);   
+    res.sendFile("index.html");  
 });
-
-
 
 
 //error handling
