@@ -41,9 +41,9 @@
         <form id="login-form">
             <div class="close-form">X</div>
             <label for="username-login">Email:</label>
-            <input type="email" id="username-login" name="username" placeholder="gman@gmail.com" />
+            <input type="email" id="username-login" name="username" />
             <label for="password-login">Password:</label>
-            <input type="password" id="password-login" name="password" placeholder="retard77" />
+            <input type="password" id="password-login" name="password"  />
             <input type="submit" />
         </form>
         <form id="register-form">
@@ -111,25 +111,13 @@
                     'Content-Type': 'application/json'
                 },          
                 body: JSON.stringify({
-                    username: "gman@gmail.com",
-                    password: "retard77"
+                    username: document.getElementById("username-login").value,
+                    password: document.getElementById("password-login").value
                 })
-            }).then(({user, token})=>{
-                console.log(token);
-
-            })
-            .catch(err=>console.log(err));
-
-        //                 $.ajax({
-        //                     type: "POST",
-        //                     url: "http://localhost:3000/login",
-        //                     data: {
-        //                         username: "gman@gmail.com",
-        //                         password: "retard77"
-        //                     }
-        //                 }).then(data=>console.log(data))
-        // .catch(err=>console.log(err));
-
+            }).then(data=>data.json())
+            .then((data)=>{             
+                localStorage.setItem("token", data.token);
+            }).catch(err=>console.log(err));
 
         });
 
