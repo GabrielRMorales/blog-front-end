@@ -21,7 +21,7 @@
             opacity: .5;
         }
         #login-form {
-            /*display: none;*/
+            display: none;
             position: absolute;
             top: 300px;
             left: 300px;
@@ -34,12 +34,14 @@
     <main>
         <form id="register-or-login-form">
             <div id="close-register-login" class="close-form">X</div>
+            <div id="register-login-errors"></div>
             <label for="username-register">Register or Login</label>
             <input type="email" id="username-register-or-login" name="username" />
             <input type="submit" />
         </form>
         <form id="login-form">
             <div class="close-form">X</div>
+            <div id="login-errors"></div>
             <label for="username-login">Email:</label>
             <input type="email" id="username-login" name="username" />
             <label for="password-login">Password:</label>
@@ -48,6 +50,7 @@
         </form>
         <form id="register-form">
             <div class="close-form">X</div>
+            <div id="register-errors"></div>
             <label for="username-register">Email:</label>
             <input type="email" id="username-register" name="username" />
             <label for="usertag" name="usertag" >User tag</label>
@@ -103,7 +106,8 @@
             document.getElementById("register-or-login-form").style.display="none";
         });
         
-        document.getElementById("login-form").addEventListener("submit",async function(e){
+        //set eventlistener for register/login form-should send fetch request
+        document.getElementById("login-form").addEventListener("submit",function(e){
             e.preventDefault();
            fetch("http://localhost:3000/login", {
                 method: "POST",
@@ -115,24 +119,71 @@
                     password: document.getElementById("password-login").value
                 })
             }).then(data=>data.json())
-            .then((data)=>{             
-                localStorage.setItem("token", data.token);
-            }).catch(err=>console.log(err));
+            .then((data)=>{ 
+                if (data.token){
+                    localStorage.setItem("token", data.token);
+                    document.getElementById("login-form").style.display = "none";
+                } else {
+                    document.getElementById("login-errors").innerText = data.message;                    
+                }            
+                
+            }).catch(err=>console.error('There has been a problem with your fetch operation:', err));
 
         });
 
+        document.getElementById("register-form").addEventListener("submit",function(e){
+            e.preventDefault();
+            fetch("http://localhost:3000/register", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    username: document.getElementById("username-register").value,
+                    usertag: document.getElementById("usertag-register").value,
+                    password: document.getElementById("password-register").value,
+                    password2: document.getElementById("password2-register").value
+                })
+            }).then(data=>data.json())
+            .then(data=>{
+                if (!data.success){
+                    let messages = document.getElementById("register-errors");
+                    messages.innerHTML="<p>Errors:</p>";
+                    if (data.errors){
+                            data.errors.forEach(err=>{
+                                messages.innerHTML+=`<li>${err.msg}</li>`;
+                            })                        
+                    }
+                } else if (data.success===true){
+                    //delete all values from form or should dom removal delete them?
+                    document.getElementById("register-form").style.display = "none";
+                    document.getElementById("login-form").style.display = "block";
+                    
+                }
+            })
+            .catch(err=>console.error('There has been a problem with your fetch operation:', err));
+
+        })
+
         //-Click on a post to see all of it (accordion style) + comments  + “Log in to Post”/“Log in to comment” button
 
-    //set eventlistener for register/login form-should send fetch request
+    
     //with fetch get a promise back and based on whether the response if true/false, build a certain form
     function registerOrLogin(){
         document.getElementById("register-or-login-form").addEventListener("submit",async function(e){
             e.preventDefault();
             //change to params:id
             let username=document.getElementById("username-register-or-login").value
-            let data = await fetch("http://localhost:3000/register/"+username);
-            data = await data.json();
-            setNewForm(data);
+            try {
+                let data = await fetch("http://localhost:3000/register/"+username);
+                data = await data.json();
+                setNewForm(data);
+            }
+           catch (error) {
+            console.log(data);
+            document.getElementById("register-login-errors").innerText = error;
+           }
+            
         });
     }
     function setNewForm({registered}){
