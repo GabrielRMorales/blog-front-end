@@ -30,8 +30,9 @@
         
     </style>
 </head>
-<body>
-    <main>
+<body></body>
+    <main id="blog-site">
+        <!-- include skeleton layout, like register buttons-->
         <form id="register-or-login-form">
             <div id="close-register-login" class="close-form">X</div>
             <div id="register-login-errors"></div>
@@ -60,21 +61,25 @@
             <label for="password2-register">Confirm Password:</label>
             <input type="password" id="password2-register" name="password2" />
             <input type="submit" />
-
         </form>
+
+       
     </main>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
     <script type="text/javascript">
-
+    const URL = "http://localhost:3000"
      //-GET published posts (shortened)
-    const getPosts = async ()=>{
-        let postData = await fetch("http://localhost:3000");
+const getPosts = async (url)=>{
+        let postData = await fetch(url);
         postData = await postData.json();
         return postData;
     }
-    const displayPosts=(posts, target=document.getElementsByTagName("main")[0], loggedIn=false)=>{
-        posts.then(postData=>{
-            postData.forEach(p=>{
+    
+const displayPosts=(data)=>{
+      //problem here is that getPosts can return data in two different layout formats,
+      //but this is only for one style-it's very brittle, refactor it to handle two
+      //or make different functions
+        data.results.forEach(p=>{
                 let postContainer = document.createElement("section");
                 postContainer.className = "post-container";
                 let postTitle = document.createElement("h2");
@@ -83,23 +88,64 @@
                 let postText=document.createElement("p");
                 postText.innerText = p.text;
                 postContainer.appendChild(postText);
-                let postButton;
-                if (loggedIn===false){
-                    postButton = document.createElement("button");
+                if (data.user.admin){
+                    //show whether publsihed or unpbulished
+                    //include edit button
+                    //include delete button
+                }
+
+                document.getElementById("blog-site").appendChild(postContainer);
+            }); 
+            let postButton = document.createElement("button");
+                if (!data.user){                    
                     postButton.innerText = "Log in to Post";
                     postButton.addEventListener("click",function(){
                         const form = document.getElementById("register-or-login-form");
                         form.style.display = "block";
                     });
-                    postContainer.appendChild(postButton);
-                }
-                target.appendChild(postContainer);
-            }); 
-        })
-              
-    }
+                    
+                } 
+else if (data.user.admin) {
+                    postButton.innerText = "Add New Post";
+    postButton.addEventListener("click", function(){
+                        //show create post form
+  let addPostForm = '<form id="create-post"><div class="close-form">X</div><div id="post-form-errors"></div><label for="post-title">Title:</label><input type="text" id="post-title" name="title" /><textarea id="post-text" name="text" form="create-post"><input type="submit" value="Post"></form>';
+        //close form button    
 
-    displayPosts(getPosts());
+        addPostForm.addEventListener("submit",function(e){
+                        e.preventDefault();
+                        //fetch post request to /posts using form id data
+                        fetch(URL+"/posts", {
+                            method: "POST",
+                            headers: {
+                                "Content-Type": "application/json"
+                            },
+                            body: JSON.stringify({
+                                title: document.getElementById("post-title").value,
+                                text: document.getElementById("post-text").value
+                            })
+                        }).then(data=>data.json())
+                        .then(data=>console.log(data))
+                        .catch(err=>console.log(err));
+                        //if successful, add new post to page and remove #create-post form
+                        //if failure, add errors to #post-form-errors
+        })  
+    })                    
+}
+                //prepend it to #blog-site
+                //CHANGE postContainer.appendChild(postButton);
+        
+}
+//if uthere's no authneticaton token
+if (!localStorage.getItem("token")){
+    displayPosts(getPosts(URL));
+} else if (localStorage.getItem("token")){
+    displayPosts(getPosts(URL+"/posts"));
+}
+    
+//else if user is logged in
+
+
 //make thse into a single configurable function-OR set the close-form class to close-display none
         let form=document.getElementById("close-register-login");
         form.addEventListener("click",function(){
@@ -109,7 +155,7 @@
         //set eventlistener for register/login form-should send fetch request
         document.getElementById("login-form").addEventListener("submit",function(e){
             e.preventDefault();
-           fetch("http://localhost:3000/login", {
+           fetch(URL+"/login", {
                 method: "POST",
                 headers: {
                     'Content-Type': 'application/json'
@@ -133,7 +179,7 @@
 
         document.getElementById("register-form").addEventListener("submit",function(e){
             e.preventDefault();
-            fetch("http://localhost:3000/register", {
+            fetch(URL + "/register", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json"
@@ -175,7 +221,7 @@
             //change to params:id
             let username=document.getElementById("username-register-or-login").value
             try {
-                let data = await fetch("http://localhost:3000/register/"+username);
+                let data = await fetch(URL+"/register/"+username);
                 data = await data.json();
                 setNewForm(data);
             }
