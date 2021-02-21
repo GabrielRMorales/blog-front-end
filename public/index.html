@@ -67,54 +67,48 @@
     </main>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
     <script type="text/javascript">
-    const URL = "http://localhost:3000"
+const URL = "http://localhost:3000";
      //-GET published posts (shortened)
 const getPosts = async (url)=>{
         let postData = await fetch(url);
-        postData = await postData.json();
-        return postData;
+        return await postData.json();
     }
-    
-const displayPosts=(data)=>{
-      //problem here is that getPosts can return data in two different layout formats,
-      //but this is only for one style-it's very brittle, refactor it to handle two
-      //or make different functions
-        data.results.forEach(p=>{
-                let postContainer = document.createElement("section");
+const postLayout=(postData)=>{
+    let postContainer = document.createElement("section");
                 postContainer.className = "post-container";
                 let postTitle = document.createElement("h2");
-                postTitle.innerText = p.title;
+                postTitle.innerText = postData.title;
                 postContainer.appendChild(postTitle);
                 let postText=document.createElement("p");
-                postText.innerText = p.text;
+                postText.innerText = postData.text;
                 postContainer.appendChild(postText);
-                if (data.user.admin){
+
                     //show whether publsihed or unpbulished
                     //include edit button
                     //include delete button
-                }
+        return postContainer;
+}
+const addPostButton = (usr)=>{
+    let postButton = document.createElement("button");
+//if user is NOT admin 
+    if (usr!==null && !usr.admin) {           
+        postButton.innerText = "Log in to Post";
+            postButton.addEventListener("click",function(){
+                const form = document.getElementById("register-or-login-form");
+                form.style.display = "block";
+            });
+                        
+    } 
+    else if (usr!==null && user.admin) {
+        postButton.innerText = "Add New Post";
+        postButton.addEventListener("click", function(){
+            //show create post form
+    let addPostForm = '<form id="create-post"><div class="close-form">X</div><div id="post-form-errors"></div><label for="post-title">Title:</label><input type="text" id="post-title" name="title" /><textarea id="post-text" name="text" form="create-post"><input type="submit" value="Post"></form>';
+            //close form button    
 
-                document.getElementById("blog-site").appendChild(postContainer);
-            }); 
-            let postButton = document.createElement("button");
-                if (!data.user){                    
-                    postButton.innerText = "Log in to Post";
-                    postButton.addEventListener("click",function(){
-                        const form = document.getElementById("register-or-login-form");
-                        form.style.display = "block";
-                    });
-                    
-                } 
-else if (data.user.admin) {
-                    postButton.innerText = "Add New Post";
-    postButton.addEventListener("click", function(){
-                        //show create post form
-  let addPostForm = '<form id="create-post"><div class="close-form">X</div><div id="post-form-errors"></div><label for="post-title">Title:</label><input type="text" id="post-title" name="title" /><textarea id="post-text" name="text" form="create-post"><input type="submit" value="Post"></form>';
-        //close form button    
-
-        addPostForm.addEventListener("submit",function(e){
+                    addPostForm.addEventListener("submit",function(e){
                         e.preventDefault();
-                        //fetch post request to /posts using form id data
+                                    //fetch post request to /posts using form id data
                         fetch(URL+"/posts", {
                             method: "POST",
                             headers: {
@@ -129,24 +123,28 @@ else if (data.user.admin) {
                         .catch(err=>console.log(err));
                         //if successful, add new post to page and remove #create-post form
                         //if failure, add errors to #post-form-errors
-        })  
-    })                    
-}
-                //prepend it to #blog-site
+                    })  
+        })                    
+    }
+                //prepend postButton to #blog-site
                 //CHANGE postContainer.appendChild(postButton);
         
 }
-//if uthere's no authneticaton token
-if (!localStorage.getItem("token")){
-    displayPosts(getPosts(URL));
-} else if (localStorage.getItem("token")){
-    displayPosts(getPosts(URL+"/posts"));
-}
+const displayPosts=({user, results})=>{
     
-//else if user is logged in
+     results.forEach((p)=>{
+        let el = postLayout(p)
+            document.getElementById("blog-site").appendChild(el);
+        //end forEach 
+     });
+    addPostButton(user);
 
+}
+        //-Click on a post to see all of it (accordion style) + comments  + “Log in to Post”/“Log in to comment” button
 
-//make thse into a single configurable function-OR set the close-form class to close-display none
+   
+    //set Event listeners
+    //make thse into a single configurable function-OR set the close-form class to close-display none
         let form=document.getElementById("close-register-login");
         form.addEventListener("click",function(){
             document.getElementById("register-or-login-form").style.display="none";
@@ -211,12 +209,7 @@ if (!localStorage.getItem("token")){
 
         })
 
-        //-Click on a post to see all of it (accordion style) + comments  + “Log in to Post”/“Log in to comment” button
-
-    
-    //with fetch get a promise back and based on whether the response if true/false, build a certain form
-    function registerOrLogin(){
-        document.getElementById("register-or-login-form").addEventListener("submit",async function(e){
+    document.getElementById("register-or-login-form").addEventListener("submit",async function(e){
             e.preventDefault();
             //change to params:id
             let username=document.getElementById("username-register-or-login").value
@@ -230,8 +223,8 @@ if (!localStorage.getItem("token")){
             document.getElementById("register-login-errors").innerText = error;
            }
             
-        });
-    }
+    });
+   
     function setNewForm({registered}){
         if (registered){
             document.getElementById("register-or-login-form").style.display = "none";
@@ -241,7 +234,18 @@ if (!localStorage.getItem("token")){
             document.getElementById("register-form").style.display = "block";
         }
     }
-    registerOrLogin();
+ 
+    //with fetch get a promise back and based on whether the response if true/false, build a certain form
+    
+    //if uthere's no authneticaton token
+    if (!localStorage.getItem("token")){
+        getPosts(URL).then(data=>displayPosts(data));
+    } 
+      //else if user is logged in
+    else if (localStorage.getItem("token")){
+        getPosts(URL+"/posts").then(data=>displayPosts(data));
+    }
+  
 
     </script>
 </body>
