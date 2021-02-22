@@ -68,77 +68,111 @@
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
     <script type="text/javascript">
 const URL = "http://localhost:3000";
+
      //-GET published posts (shortened)
 const getPosts = async (url)=>{
         let postData = await fetch(url);
         return await postData.json();
     }
+const deleteButton = ()=>{
+    let btn = document.createElement("button");
+    btn.className = "delete-post-btn";
+    btn.innerText = "Delete Post";
+    btn.addEventListener("click",function(e){
+        e.preventDefault();
+        let btnId = e.target.id;
+        fetch(URL+"/posts/delete/"+btnId, 
+        {method: "DELETE"}).then(data=>data.json())
+        .then(data=>{
+            if (data.deleted===true){
+                //delete from page
+            }
+        });
+
+    });
+    return btn;
+}
 const postLayout=(postData)=>{
     let postContainer = document.createElement("section");
-                postContainer.className = "post-container";
-                let postTitle = document.createElement("h2");
-                postTitle.innerText = postData.title;
-                postContainer.appendChild(postTitle);
-                let postText=document.createElement("p");
-                postText.innerText = postData.text;
-                postContainer.appendChild(postText);
-
-                    //show whether publsihed or unpbulished
-                    //include edit button
-                    //include delete button
+    let postTitle = document.createElement("h2");
+    postContainer.className = "post-container";
+    postTitle.innerText = postData.title;
+    postContainer.appendChild(postTitle);
+    let postText=document.createElement("p");
+    postText.innerText = postData.text;
+    postContainer.appendChild(postText);
+    let postStatus = document.createElement("p");
+    postStatus.innerText = postData.published ? "published" : "unpublished" ;
+    postContainer.appendChild(postStatus);   
+    postContainer.id = postData._id;  
+        //include edit button
+        //include delete button
         return postContainer;
 }
-const addPostButton = (usr)=>{
+const newPostButton = (usr)=>{
+
     let postButton = document.createElement("button");
-//if user is NOT admin 
-    if (usr!==null && !usr.admin) {           
+    let siteChild = document.getElementById("blog-site").firstChild;
+    siteChild.parentNode.insertBefore(postButton, siteChild);
+//if user is NOT admin    
+if (usr!==null && usr.admin) {
+    postButton.innerText = "Add New Post";
+    postButton.addEventListener("click", function(){
+        //show create post form
+        let addPostForm = document.createElement("form");
+           addPostForm.id="create-post";
+            //close form button    needs event listern!!
+            let closeBtn = document.createElement("div");            
+            closeBtn.classList.add("close-form");
+            closeBtn.innerText="X";
+            addPostForm.appendChild(closeBtn);
+            addPostForm.innerHTML+='<div id="post-form-errors"></div><label for="post-title">Title:</label><input type="text" id="post-title" name="title" /><input type="submit" value="Post"><textarea id="post-text" name="text" form="create-post" />';
+
+            addPostForm.addEventListener("submit",function(e){
+                e.preventDefault();
+                //fetch post request to /posts using form id data
+                fetch(URL+"/posts", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${localStorage.getItem("token")}`
+                    },
+                    body: JSON.stringify({
+                        title: document.getElementById("post-title").value,
+                        text: document.getElementById("post-text").value
+                    })
+                }).then(data=>data.json())
+                .then(data=>{console.log(data)
+                    //if successful, add new post to page and remove #create-post form
+                    let el = postLayout(data);
+                    document.getElementById("blog-site").appendChild(el);
+                    console.log(e.target);
+                    e.target.parentNode.removeChild(e.target);
+                    //if failure, add errors to #post-form-errors
+                })
+                .catch(err=>console.log(err));
+            })  
+      // document.getElementById("blog-site").firstChild.appendChild(addPostForm);
+       postButton.after(addPostForm);
+    })                    
+    } else {
         postButton.innerText = "Log in to Post";
             postButton.addEventListener("click",function(){
                 const form = document.getElementById("register-or-login-form");
                 form.style.display = "block";
-            });
+        });
                         
-    } 
-    else if (usr!==null && user.admin) {
-        postButton.innerText = "Add New Post";
-        postButton.addEventListener("click", function(){
-            //show create post form
-    let addPostForm = '<form id="create-post"><div class="close-form">X</div><div id="post-form-errors"></div><label for="post-title">Title:</label><input type="text" id="post-title" name="title" /><textarea id="post-text" name="text" form="create-post"><input type="submit" value="Post"></form>';
-            //close form button    
-
-                    addPostForm.addEventListener("submit",function(e){
-                        e.preventDefault();
-                                    //fetch post request to /posts using form id data
-                        fetch(URL+"/posts", {
-                            method: "POST",
-                            headers: {
-                                "Content-Type": "application/json"
-                            },
-                            body: JSON.stringify({
-                                title: document.getElementById("post-title").value,
-                                text: document.getElementById("post-text").value
-                            })
-                        }).then(data=>data.json())
-                        .then(data=>console.log(data))
-                        .catch(err=>console.log(err));
-                        //if successful, add new post to page and remove #create-post form
-                        //if failure, add errors to #post-form-errors
-                    })  
-        })                    
-    }
-                //prepend postButton to #blog-site
-                //CHANGE postContainer.appendChild(postButton);
+    }   
         
 }
 const displayPosts=({user, results})=>{
     
      results.forEach((p)=>{
-        let el = postLayout(p)
-            document.getElementById("blog-site").appendChild(el);
-        //end forEach 
+        let el = postLayout(p);
+        document.getElementById("blog-site").appendChild(el);
      });
-    addPostButton(user);
-
+     newPostButton(user);
+     //deleteButton();
 }
         //-Click on a post to see all of it (accordion style) + comments  + “Log in to Post”/“Log in to comment” button
 
@@ -167,6 +201,8 @@ const displayPosts=({user, results})=>{
                 if (data.token){
                     localStorage.setItem("token", data.token);
                     document.getElementById("login-form").style.display = "none";
+                    //now what?
+                    renderPage();
                 } else {
                     document.getElementById("login-errors").innerText = data.message;                    
                 }            
@@ -238,15 +274,23 @@ const displayPosts=({user, results})=>{
     //with fetch get a promise back and based on whether the response if true/false, build a certain form
     
     //if uthere's no authneticaton token
+function renderPage(){
     if (!localStorage.getItem("token")){
-        getPosts(URL).then(data=>displayPosts(data));
+        //fix error here after
+        getPosts(URL).then(data=>displayPosts(data)).catch(err=>console.log(err));
     } 
       //else if user is logged in
     else if (localStorage.getItem("token")){
-        getPosts(URL+"/posts").then(data=>displayPosts(data));
-    }
-  
+        fetch(URL+"/posts",{
+            method: "GET",
+            headers: {
+    "Authorization": `Bearer ${localStorage.getItem("token")}`
+            }
+        }).then(data=>data.json()).then(data=>displayPosts(data)).catch(err=>console.log(err));
+    }  
+}
 
+renderPage();
     </script>
 </body>
 </html>
