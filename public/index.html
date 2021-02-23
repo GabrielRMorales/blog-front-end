@@ -28,6 +28,7 @@
             opacity: .5;
         }
         
+        
     </style>
 </head>
 <body></body>
@@ -79,6 +80,7 @@ const deleteButton = ()=>{
     btn.className = "delete-post-btn";
     btn.innerText = "Delete Post";
     btn.addEventListener("click",function(e){
+        //remember this needs a confirmation passthrough
         e.preventDefault();
         let btnId = e.target.id;
         fetch(URL+"/posts/delete/"+btnId, 
@@ -93,22 +95,81 @@ const deleteButton = ()=>{
     return btn;
 }
 const postLayout=(postData)=>{
-    let postContainer = document.createElement("section");
-    let postTitle = document.createElement("h2");
+    let postContainer = document.createElement("section");   
     postContainer.className = "post-container";
+    let postTitle = document.createElement("h2")
     postTitle.innerText = postData.title;
+    postTitle.className = "post-title";
     postContainer.appendChild(postTitle);
     let postText=document.createElement("p");
     postText.innerText = postData.text;
+    postText.className = "post-text";
     postContainer.appendChild(postText);
     let postStatus = document.createElement("p");
     postStatus.innerText = postData.published ? "published" : "unpublished" ;
+    postStatus.className = "post-status";
     postContainer.appendChild(postStatus);   
-    postContainer.id = postData._id;  
-        //include edit button
-        //include delete button
-        return postContainer;
+    postContainer.id = postData._id;
+   
+    return postContainer;
 }
+const editForm = (title, text, published)=>{
+    //edit form should include title, text, and radio button for published/unpublished
+    let form = document.createElement("form");
+    //edit form needs a close btn too
+    form.className = "edit-post-form";
+    form.innerHTML+="<label for='edit-form-title'>Title:</label>";
+    form.innerHTML+=`<input type='text' class='edit-form-title' value='${title}' name='title' />`
+    form.innerHTML+="<label for='edit-form-text'>Text:</label>";
+    form.innerHTML+=`<input type='text' class='edit-form-text' value='${text}' name='text' />`
+    form.innerHTML+=`<input type="radio" class="edit-form-published" ${published ==="published"? checked : null}>`;
+    form.innerHTML+="<label for='edit-form-published'>Published</label>"
+    form.innerHTML+=`<input type="radio" class="edit-form-unpublished" checked=${published ==="unpublished"? checked : null }>`;
+    form.innerHTML+="<label for='edit-form-unpublished'>Unpublished</label>"
+    form.innerHTML+="<input type='submit' class='update-post-btn' value='Update Post' />"
+    return form;
+}
+const editButton = ()=>{
+    let btn = document.createElement("button");
+    btn.className = "edit-post-btn";
+    btn.innerText = "Edit Post";
+    //addeventlistener based on id
+    btn.addEventListener("click",function(e){
+        const targetEl = document.getElementById(e.target.parentNode.id);     
+        let title, text, published;
+        [title, text] = [targetEl.querySelector(".post-title").innerText,
+        targetEl.querySelector(".post-text").innerText, targetEl.querySelector(".post-status").innerText];
+
+        targetEl.innerHTML = "";
+        targetEl.appendChild(editForm(title, text, published));
+        targetEl.querySelector(".edit-post-form").addEventListener("submit",function(e){
+            e.preventDefault();
+            //close form
+            //send put request
+            
+            let title= targetEl.querySelector(".edit-form-title").value;
+            let text = targetEl.querySelector(".edit-form-text").value;
+            console.log(title + " " +text);
+            fetch(URL+"/posts/edit/"+e.target.parentNode.id, {
+                method: "PUT", headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${localStorage.getItem("token")}` },
+                body: JSON.stringify({ title, text})
+            }).then(data=>data.json())
+            .then(data=>{
+                //if err send back
+                //
+                console.log(data);
+            })
+            //update post DOM
+            
+        })
+    });
+
+   return btn;
+
+}
+
 const newPostButton = (usr)=>{
 
     let postButton = document.createElement("button");
@@ -169,10 +230,14 @@ const displayPosts=({user, results})=>{
     
      results.forEach((p)=>{
         let el = postLayout(p);
+          //include edit button
+     el.appendChild(editButton());
+        //include delete button
+     //deleteButton();
         document.getElementById("blog-site").appendChild(el);
      });
      newPostButton(user);
-     //deleteButton();
+    
 }
         //-Click on a post to see all of it (accordion style) + comments  + “Log in to Post”/“Log in to comment” button
 
