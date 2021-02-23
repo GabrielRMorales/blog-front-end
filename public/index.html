@@ -27,7 +27,10 @@
             left: 300px;
             opacity: .5;
         }
-        
+        section {
+            border: 1px solid black;
+            padding: 10px;
+        }
         
     </style>
 </head>
@@ -82,12 +85,18 @@ const deleteButton = ()=>{
     btn.addEventListener("click",function(e){
         //remember this needs a confirmation passthrough
         e.preventDefault();
-        let btnId = e.target.id;
-        fetch(URL+"/posts/delete/"+btnId, 
-        {method: "DELETE"}).then(data=>data.json())
+        let post =  e.target.parentNode;
+        let btnId = post.id;
+       fetch(URL+"/posts/delete/"+btnId, 
+        {method: "DELETE",
+        headers: {
+            "Authorization": `Bearer ${localStorage.getItem("token")}`
+        }
+        }).then(data=>data.json())
         .then(data=>{
             if (data.deleted===true){
                 //delete from page
+                post.parentNode.removeChild(post);
             }
         });
 
@@ -135,7 +144,7 @@ const editButton = ()=>{
     btn.innerText = "Edit Post";
     //addeventlistener based on id
     btn.addEventListener("click",function(e){
-        const targetEl = document.getElementById(e.target.parentNode.id);     
+        let targetEl = document.getElementById(e.target.parentNode.id);     
         let title, text, published;
         [title, text] = [targetEl.querySelector(".post-title").innerText,
         targetEl.querySelector(".post-text").innerText, targetEl.querySelector(".post-status").innerText];
@@ -159,9 +168,11 @@ const editButton = ()=>{
             .then(data=>{
                 //if err send back
                 //
-                console.log(data);
+                console.log(data);                
+                //update post DOM
+                targetEl.parentNode.replaceChild(postLayout(data), targetEl);
             })
-            //update post DOM
+            
             
         })
     });
@@ -233,7 +244,7 @@ const displayPosts=({user, results})=>{
           //include edit button
      el.appendChild(editButton());
         //include delete button
-     //deleteButton();
+     el.appendChild(deleteButton());
         document.getElementById("blog-site").appendChild(el);
      });
      newPostButton(user);
