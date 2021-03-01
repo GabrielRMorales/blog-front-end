@@ -27,7 +27,7 @@
             left: 300px;
             opacity: .5;
         }
-        section {
+        section,.comment {
             border: 1px solid black;
             padding: 10px;
         }
@@ -78,6 +78,10 @@ const getPosts = async (url)=>{
         let postData = await fetch(url);
         return await postData.json();
     }
+const getComments = async (url)=>{
+    let commentData = await fetch(url+"/comments");
+    return await commentData.json();
+}
 const deleteButton = ()=>{
     let btn = document.createElement("button");
     btn.className = "delete-post-btn";
@@ -237,15 +241,38 @@ if (usr!==null && usr.admin) {
     }   
         
 }
-const displayPosts=({user, results})=>{
+//alter depending on return value of get posts?
+const sortComments = (comments, post)=>{
+    if (comments){
+        return comments.filter(c=>c.post===post._id)
+
+    }
+  
+}
+const displayComment = (comment)=>{
+    let commContainer = document.createElement("div");
+    commContainer.className = "comment";
+    commContainer.innerHTML+=`<p>${comment.user.usertag}:</p>`;
+    commContainer.innerHTML+=`<h3>${comment.text}</h3>`;   
+    return commContainer;
+}
+const displayPosts=({user, results}, commentArr)=>{
     
      results.forEach((p)=>{
         let el = postLayout(p);
-          //include edit button
+
+     //include edit button
      el.appendChild(editButton());
-        //include delete button
+     //include delete button
      el.appendChild(deleteButton());
-        document.getElementById("blog-site").appendChild(el);
+     //add in comments
+        //commentArr
+      let commentList = sortComments(commentArr, p);
+      commentList.forEach(comment=>{
+          el.appendChild(displayComment(comment));
+      })
+      console.log(commentList);
+      document.getElementById("blog-site").appendChild(el);
      });
      newPostButton(user);
     
@@ -346,23 +373,32 @@ const displayPosts=({user, results})=>{
             document.getElementById("register-form").style.display = "block";
         }
     }
- 
+ function getData(path){
+    return fetch(URL+path,{
+            method: "GET",
+            headers: {
+    "Authorization": `Bearer ${localStorage.getItem("token")}`
+            }
+            //data.json returns an unresolved promise, promise.resolve or promise.all would return a resolved promise
+            //this resolved prmise can be used
+        }).then(data=>data.json());
+}
+
     //with fetch get a promise back and based on whether the response if true/false, build a certain form
     
     //if uthere's no authneticaton token
 function renderPage(){
     if (!localStorage.getItem("token")){
         //fix error here after
-        getPosts(URL).then(data=>displayPosts(data)).catch(err=>console.log(err));
+        Promise.all([getPosts(URL), getComments(URL)]).then(values=>{
+            displayPosts(values[0], values[1]);
+        }).catch(err=>console.log(err));
     } 
       //else if user is logged in
     else if (localStorage.getItem("token")){
-        fetch(URL+"/posts",{
-            method: "GET",
-            headers: {
-    "Authorization": `Bearer ${localStorage.getItem("token")}`
-            }
-        }).then(data=>data.json()).then(data=>displayPosts(data)).catch(err=>console.log(err));
+        Promise.all([getData("/posts"), getData("/comments")]).then(values=>{
+            displayPosts(values[0],values[1]);
+        }).catch(err=>console.log(err));
     }  
 }
 
