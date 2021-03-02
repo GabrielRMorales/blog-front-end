@@ -78,16 +78,14 @@ const getPosts = async (url)=>{
         let postData = await fetch(url);
         return await postData.json();
     }
-const getComments = async (url)=>{
-    let commentData = await fetch(url+"/comments");
-    return await commentData.json();
-}
-const deleteButton = ()=>{
+
+const deletePostButton = ()=>{
     let btn = document.createElement("button");
     btn.className = "delete-post-btn";
     btn.innerText = "Delete Post";
     btn.addEventListener("click",function(e){
         //remember this needs a confirmation passthrough
+        //could be its own deleteButtonForm function
         e.preventDefault();
         let post =  e.target.parentNode;
         let btnId = post.id;
@@ -126,7 +124,7 @@ const postLayout=(postData)=>{
    
     return postContainer;
 }
-const editForm = (title, text, published)=>{
+const editPostForm = (title, text, published)=>{
     //edit form should include title, text, and radio button for published/unpublished
     let form = document.createElement("form");
     //edit form needs a close btn too
@@ -142,7 +140,7 @@ const editForm = (title, text, published)=>{
     form.innerHTML+="<input type='submit' class='update-post-btn' value='Update Post' />"
     return form;
 }
-const editButton = ()=>{
+const editPostButton = ()=>{
     let btn = document.createElement("button");
     btn.className = "edit-post-btn";
     btn.innerText = "Edit Post";
@@ -154,7 +152,7 @@ const editButton = ()=>{
         targetEl.querySelector(".post-text").innerText, targetEl.querySelector(".post-status").innerText];
 
         targetEl.innerHTML = "";
-        targetEl.appendChild(editForm(title, text, published));
+        targetEl.appendChild(editPostForm(title, text, published));
         targetEl.querySelector(".edit-post-form").addEventListener("submit",function(e){
             e.preventDefault();
             //close form
@@ -195,6 +193,7 @@ if (usr!==null && usr.admin) {
     postButton.innerText = "Add New Post";
     postButton.addEventListener("click", function(){
         //show create post form
+        //refactor addPostForm to its own function
         let addPostForm = document.createElement("form");
            addPostForm.id="create-post";
             //close form button    needs event listern!!
@@ -241,6 +240,11 @@ if (usr!==null && usr.admin) {
     }   
         
 }
+
+const getComments = async (url)=>{
+    let commentData = await fetch(url+"/comments");
+    return await commentData.json();
+}
 //alter depending on return value of get posts?
 const sortComments = (comments, post)=>{
     if (comments){
@@ -249,29 +253,77 @@ const sortComments = (comments, post)=>{
     }
   
 }
-const displayComment = (comment)=>{
+const commentLayout = (comment)=>{
     let commContainer = document.createElement("div");
     commContainer.className = "comment";
     commContainer.innerHTML+=`<p>${comment.user.usertag}:</p>`;
     commContainer.innerHTML+=`<h3>${comment.text}</h3>`;   
     return commContainer;
 }
+
+const newCommentButton = (user)=>{
+    let commentButton = document.createElement("button");
+    if (user!==null && user.admin){
+        commentButton.innerText = "Reply";
+        commentButton.addEventListener("click",function(e){
+            //addCommentForm
+
+
+            addCommentForm.addEventListener("submit", function(e){
+                e.preventDefault();
+                
+
+
+
+
+            })
+
+        });
+
+
+
+
+
+
+
+
+    }
+    else {
+        //log in to reply
+    }
+
+
+}
+
+const editCommentForm = ()=>{
+
+}
+
+const editCommentButton = ()=>{
+
+}
+
+const deleteCommentButton = ()=>{
+
+}
+
+
 const displayPosts=({user, results}, commentArr)=>{
     
-     results.forEach((p)=>{
+    results.forEach((p)=>{
         let el = postLayout(p);
 
      //include edit button
-     el.appendChild(editButton());
+     el.appendChild(editPostButton());
      //include delete button
-     el.appendChild(deleteButton());
+     el.appendChild(deletePostButton());
      //add in comments
         //commentArr
       let commentList = sortComments(commentArr, p);
       commentList.forEach(comment=>{
-          el.appendChild(displayComment(comment));
+          el.appendChild(commentLayout(comment));
       })
-      console.log(commentList);
+      
       document.getElementById("blog-site").appendChild(el);
      });
      newPostButton(user);
@@ -280,8 +332,8 @@ const displayPosts=({user, results}, commentArr)=>{
         //-Click on a post to see all of it (accordion style) + comments  + “Log in to Post”/“Log in to comment” button
 
    
-    //set Event listeners
-    //make thse into a single configurable function-OR set the close-form class to close-display none
+//set Event listeners
+//make thse into a single configurable function-OR set the close-form class to close-display none
         let form=document.getElementById("close-register-login");
         form.addEventListener("click",function(){
             document.getElementById("register-or-login-form").style.display="none";
