@@ -162,7 +162,8 @@ const editPostButton = ()=>{
             let text = targetEl.querySelector(".edit-form-text").value;
             console.log(title + " " +text);
             fetch(URL+"/posts/edit/"+e.target.parentNode.id, {
-                method: "PUT", headers: {
+                method: "PUT",
+                headers: {
                 "Content-Type": "application/json",
                 "Authorization": `Bearer ${localStorage.getItem("token")}` },
                 body: JSON.stringify({ title, text})
@@ -217,11 +218,11 @@ if (usr!==null && usr.admin) {
                         text: document.getElementById("post-text").value
                     })
                 }).then(data=>data.json())
-                .then(data=>{console.log(data)
+                .then(data=>{
+                    console.log(data)
                     //if successful, add new post to page and remove #create-post form
                     let el = postLayout(data);
                     document.getElementById("blog-site").appendChild(el);
-                    console.log(e.target);
                     e.target.parentNode.removeChild(e.target);
                     //if failure, add errors to #post-form-errors
                 })
@@ -262,36 +263,55 @@ const commentLayout = (comment)=>{
 }
 
 const newCommentButton = (user)=>{
+    console.log(user);
     let commentButton = document.createElement("button");
     if (user!==null && user.admin){
         commentButton.innerText = "Reply";
         commentButton.addEventListener("click",function(e){
-            //addCommentForm
+            //addCommentForm-refactor out
+            let addCommentForm = document.createElement("form");
+            //addCommentForm.classList.add("addCo")
+            let postId=e.target.parentNode.id;
+            addCommentForm.innerHTML+=`<button type='submit'>Add Comment</button><textarea id='${postId}-comment' name='commentText' class='comment-text'  />`
 
+            e.target.parentNode.appendChild(addCommentForm);
 
             addCommentForm.addEventListener("submit", function(e){
-                e.preventDefault();
-                
-
-
-
+                e.preventDefault();                
+               console.log(document.getElementById(postId+"-comment").value);
+                fetch(URL+"/comments", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${localStorage.getItem("token")}`
+                    },
+                    body: JSON.stringify({
+                        text: document.getElementById(postId+"-comment").value,
+                        postId: postId
+                    })
+                }).then(data=>data.json())
+                .then(comment=>{
+                    console.log(user)
+                    console.log(comment)
+                    //needs to have user here as well
+                    e.target.parentNode.appendChild(commentLayout(comment));
+                    e.target.parentNode.removeChild(e.target);
+                    
+                })
+                .catch(err=>console.log(err));
 
             })
+            //addCommentForm also needs a close button to cancel
 
         });
-
-
-
-
-
-
-
 
     }
     else {
         //log in to reply
+        commentButton.innerText="Login To Reply";
     }
 
+    return commentButton;
 
 }
 
@@ -309,10 +329,11 @@ const deleteCommentButton = ()=>{
 
 
 const displayPosts=({user, results}, commentArr)=>{
-    
+    //console.log(user);
     results.forEach((p)=>{
         let el = postLayout(p);
-
+      //addComment 
+      el.appendChild(newCommentButton(user));
      //include edit button
      el.appendChild(editPostButton());
      //include delete button
