@@ -126,6 +126,7 @@ const postLayout=(postData)=>{
 }
 const editPostForm = (title, text, published)=>{
     //edit form should include title, text, and radio button for published/unpublished
+        //redo editPost-it doesn't work!!
     let form = document.createElement("form");
     //edit form needs a close btn too
     form.className = "edit-post-form";
@@ -279,18 +280,7 @@ const deleteCommentButton = ()=>{
     return btn;
 }
 
-const commentLayout = (comment)=>{
-    let commContainer = document.createElement("div");
-    commContainer.className = "comment";
-    commContainer.id=`${comment._id}`;
-    commContainer.innerHTML+=`<p>${comment.user.usertag}:</p>`;
-    commContainer.innerHTML+=`<h3>${comment.text}</h3>`;   
-    commContainer.appendChild(deleteCommentButton());
-    return commContainer;
-}
-
 const newCommentButton = (user)=>{
-    console.log(user);
     let commentButton = document.createElement("button");
     if (user!==null && user.admin){
         commentButton.innerText = "Reply";
@@ -305,7 +295,6 @@ const newCommentButton = (user)=>{
 
             addCommentForm.addEventListener("submit", function(e){
                 e.preventDefault();                
-               console.log(document.getElementById(postId+"-comment").value);
                 fetch(URL+"/comments", {
                     method: "POST",
                     headers: {
@@ -318,9 +307,6 @@ const newCommentButton = (user)=>{
                     })
                 }).then(data=>data.json())
                 .then(comment=>{
-                    console.log(user)
-                    console.log(comment)
-                    //needs to have user here as well
                     e.target.parentNode.appendChild(commentLayout(comment));
                     e.target.parentNode.removeChild(e.target);
                     
@@ -342,15 +328,72 @@ const newCommentButton = (user)=>{
 
 }
 
-const editCommentForm = ()=>{
+const editCommentForm = (commentId, commentText)=>{
+    let form = document.createElement("form");
+    console.log(commentText);
+    form.innerHTML+=`<button type='submit' >Update Comment</button><textarea id='${commentId}-edit-text' name='edit-comment-text' className='edit-comment-form' >`
+   // document.getElementById(commentId+"-edit-text").defaultValue = commentText;
+   //add in defeault value
+    console.log(document.getElementById('604059f474ca5103583b72b7-edit-text'));
+    form.addEventListener("submit", function(e){
+        e.preventDefault();
+        console.log();
+        let newInput = document.getElementById(`${commentId}-edit-text`).value;
 
+        fetch(URL+"/comments/edit/"+commentId, {
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${localStorage.getItem("token")}`
+            },
+            body: JSON.stringify({
+                text: newInput,
+                post: document.getElementById(commentId).parentNode.parentNode.id
+            })
+       
+        }).then(data=>data.json()) 
+            .then(data=>{console.log(data)
+            let newComment = document.createElement("h3")
+            newComment.innerText = data.text;
+            let comment = document.getElementById(commentId);
+            comment.replaceChild(newComment, form)
+            // include an edited by user.name-this would require adding the field to the database   
+            /*let editNote = document.createElement("p");
+            editNote.innerText = `Edited by ${data.editingUser}`;   
+            comment.appendChild(editNote);*/
+            })
+            .catch(err=>{console.log(err)
+                form.appendChild("There was an error!");
+            });        
+
+    })
+    return form;
 }
 
-const editCommentButton = ()=>{
+const editCommentButton = (comment)=>{
+    console.log(comment);
+    let btn=document.createElement("button");
+    btn.innerText = "Edit Comment";
 
+    btn.addEventListener("click", function(e){
+        let commentId = comment.id;
+        let commentText = comment.querySelector("h3");
+       e.target.parentNode.replaceChild(editCommentForm(commentId, commentText.innerText), commentText);
+
+    });
+    return btn;
 }
 
-
+const commentLayout = (comment)=>{
+    let commContainer = document.createElement("div");
+    commContainer.className = "comment";
+    commContainer.id=`${comment._id}`;
+    commContainer.innerHTML+=`<p>${comment.user.usertag}:</p>`;
+    commContainer.innerHTML+=`<h3>${comment.text}</h3>`;   
+    commContainer.appendChild(deleteCommentButton());
+    commContainer.appendChild(editCommentButton(commContainer));
+    return commContainer;
+}
 
 const displayPosts=({user, results}, commentArr)=>{
     //console.log(user);
@@ -366,7 +409,7 @@ const displayPosts=({user, results}, commentArr)=>{
         //commentArr
       let commentList = sortComments(commentArr, p);
       commentList.forEach(comment=>{
-          el.appendChild(commentLayout(comment));
+          el.appendChild(commentLayout(comment));        
       })
       
       document.getElementById("blog-site").appendChild(el);
