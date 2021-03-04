@@ -254,11 +254,38 @@ const sortComments = (comments, post)=>{
     }
   
 }
+
+const deleteCommentButton = ()=>{
+    let btn = document.createElement("button");
+    btn.innerHTML="Delete this comment";
+    btn.addEventListener("click", function(e){
+        commentId=e.target.parentNode.id;
+        //fetch delete request
+        fetch(URL+"/comments/delete/"+commentId,{
+            method: "DELETE",
+            headers: {
+                "Authorization": `Bearer ${localStorage.getItem("token")}`
+            }
+        }).then(data=>data.json())
+        .then(data=>{
+            if (data.deleted===true){
+                let el=document.getElementById(commentId)
+                el.parentNode.removeChild(el);
+            }
+        })
+        .catch(err=>console.log(err));
+
+    });
+    return btn;
+}
+
 const commentLayout = (comment)=>{
     let commContainer = document.createElement("div");
     commContainer.className = "comment";
+    commContainer.id=`${comment._id}`;
     commContainer.innerHTML+=`<p>${comment.user.usertag}:</p>`;
     commContainer.innerHTML+=`<h3>${comment.text}</h3>`;   
+    commContainer.appendChild(deleteCommentButton());
     return commContainer;
 }
 
@@ -323,9 +350,6 @@ const editCommentButton = ()=>{
 
 }
 
-const deleteCommentButton = ()=>{
-
-}
 
 
 const displayPosts=({user, results}, commentArr)=>{
