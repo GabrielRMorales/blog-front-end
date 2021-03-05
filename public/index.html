@@ -161,8 +161,9 @@ const editPostButton = ()=>{
             
             let title= targetEl.querySelector(".edit-form-title").value;
             let text = targetEl.querySelector(".edit-form-text").value;
-            console.log(title + " " +text);
-            fetch(URL+"/posts/edit/"+e.target.parentNode.id, {
+            let postId = e.target.parentNode.id;
+            console.log(e.target.parentNode.id);
+           fetch(URL+"/posts/edit/"+e.target.parentNode.id, {
                 method: "PUT",
                 headers: {
                 "Content-Type": "application/json",
@@ -175,7 +176,8 @@ const editPostButton = ()=>{
                 console.log(data);                
                 //update post DOM
                 targetEl.parentNode.replaceChild(postLayout(data), targetEl);
-            })
+                //needs to add edit/delete/ buttons
+            }).catch(err=>console.log(err));
             
             
         })
@@ -371,7 +373,7 @@ const editCommentForm = (commentId, commentText)=>{
 }
 
 const editCommentButton = (comment)=>{
-    console.log(comment);
+    
     let btn=document.createElement("button");
     btn.innerText = "Edit Comment";
 
