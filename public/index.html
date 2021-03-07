@@ -35,6 +35,9 @@
     </style>
 </head>
 <body></body>
+    <header>
+        <button id="logout">Logout</button>
+    </header>
     <main id="blog-site">
         <!-- include skeleton layout, like register buttons-->
         <form id="register-or-login-form">
@@ -71,6 +74,17 @@
     </main>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
     <script type="text/javascript">
+//new posts don't show reply buttons
+//doesn't logout properly
+//refactor out editCommentForm
+//close buttons for edit post, edit comment, new comment
+
+//show errors
+//the pre-register/login form bugs...ie duplicate forms
+
+//refactor it as needed!
+//stylize it!
+
 const URL = "http://localhost:3000";
 
      //-GET published posts (shortened)
@@ -125,8 +139,7 @@ const postLayout=(postData)=>{
     return postContainer;
 }
 const editPostForm = (title, text, published)=>{
-    //edit form should include title, text, and radio button for published/unpublished
-        //redo editPost-it doesn't work!!
+     
     let form = document.createElement("form");
     //edit form needs a close btn too
     form.className = "edit-post-form";
@@ -134,9 +147,9 @@ const editPostForm = (title, text, published)=>{
     form.innerHTML+=`<input type='text' class='edit-form-title' value='${title}' name='title' />`
     form.innerHTML+="<label for='edit-form-text'>Text:</label>";
     form.innerHTML+=`<input type='text' class='edit-form-text' value='${text}' name='text' />`
-    form.innerHTML+=`<input type="radio" class="edit-form-published" ${published ==="published"? checked : null}>`;
+    form.innerHTML+=`<input type="radio" name="post-status" class="edit-form-published" ${published ==="published"? "checked" : ""}>`;
     form.innerHTML+="<label for='edit-form-published'>Published</label>"
-    form.innerHTML+=`<input type="radio" class="edit-form-unpublished" checked=${published ==="unpublished"? checked : null }>`;
+    form.innerHTML+=`<input type="radio" name="post-status" class="edit-form-unpublished" ${published ==="unpublished"? "checked" : "" }>`;
     form.innerHTML+="<label for='edit-form-unpublished'>Unpublished</label>"
     form.innerHTML+="<input type='submit' class='update-post-btn' value='Update Post' />"
     return form;
@@ -149,9 +162,8 @@ const editPostButton = ()=>{
     btn.addEventListener("click",function(e){
         let targetEl = document.getElementById(e.target.parentNode.id);     
         let title, text, published;
-        [title, text] = [targetEl.querySelector(".post-title").innerText,
+        [title, text, published] = [targetEl.querySelector(".post-title").innerText,
         targetEl.querySelector(".post-text").innerText, targetEl.querySelector(".post-status").innerText];
-
         targetEl.innerHTML = "";
         targetEl.appendChild(editPostForm(title, text, published));
         targetEl.querySelector(".edit-post-form").addEventListener("submit",function(e){
@@ -161,6 +173,7 @@ const editPostButton = ()=>{
             
             let title= targetEl.querySelector(".edit-form-title").value;
             let text = targetEl.querySelector(".edit-form-text").value;
+            let published = targetEl.querySelector("input[name='post-status']:checked").value;
             let postId = e.target.parentNode.id;
             console.log(e.target.parentNode.id);
            fetch(URL+"/posts/edit/"+e.target.parentNode.id, {
@@ -168,7 +181,7 @@ const editPostButton = ()=>{
                 headers: {
                 "Content-Type": "application/json",
                 "Authorization": `Bearer ${localStorage.getItem("token")}` },
-                body: JSON.stringify({ title, text})
+                body: JSON.stringify({ title, text, published})
             }).then(data=>data.json())
             .then(data=>{
                 //if err send back
@@ -176,7 +189,12 @@ const editPostButton = ()=>{
                 console.log(data);                
                 //update post DOM
                 targetEl.parentNode.replaceChild(postLayout(data), targetEl);
-                //needs to add edit/delete/ buttons
+                //needs to add reply buttons
+                console.log(targetEl);
+                let updatedPost = document.getElementById(data._id);
+                updatedPost.appendChild(editPostButton());
+                updatedPost.appendChild(deletePostButton());
+
             }).catch(err=>console.log(err));
             
             
@@ -187,25 +205,21 @@ const editPostButton = ()=>{
 
 }
 
-const newPostButton = (usr)=>{
+const newPostButton = (authenticationCode)=>{
 
     let postButton = document.createElement("button");
     let siteChild = document.getElementById("blog-site").firstChild;
     siteChild.parentNode.insertBefore(postButton, siteChild);
 //if user is NOT admin    
-if (usr!==null && usr.admin) {
+if (authenticationCode===2) {
     postButton.innerText = "Add New Post";
     postButton.addEventListener("click", function(){
         //show create post form
         //refactor addPostForm to its own function
         let addPostForm = document.createElement("form");
            addPostForm.id="create-post";
-            //close form button    needs event listern!!
-            let closeBtn = document.createElement("div");            
-            closeBtn.classList.add("close-form");
-            closeBtn.innerText="X";
-            addPostForm.appendChild(closeBtn);
-            addPostForm.innerHTML+='<div id="post-form-errors"></div><label for="post-title">Title:</label><input type="text" id="post-title" name="title" /><input type="submit" value="Post"><textarea id="post-text" name="text" form="create-post" />';
+                       
+            addPostForm.innerHTML+='<div class="close-form">X</div><div id="post-form-errors"></div><label for="post-title">Title:</label><input type="text" id="post-title" name="title" /><input type="submit" value="Post"><textarea id="post-text" name="text" form="create-post" />';
 
             addPostForm.addEventListener("submit",function(e){
                 e.preventDefault();
@@ -227,11 +241,19 @@ if (usr!==null && usr.admin) {
                     let el = postLayout(data);
                     document.getElementById("blog-site").appendChild(el);
                     e.target.parentNode.removeChild(e.target);
+                    el.appendChild(newCommentButton());
+                    el.appendChild(editPostButton());
+                    el.appendChild(deletePostButton());
+
                     //if failure, add errors to #post-form-errors
                 })
                 .catch(err=>console.log(err));
-            })  
-      // document.getElementById("blog-site").firstChild.appendChild(addPostForm);
+            })
+            addPostForm.querySelector(".close-form").addEventListener("click",function(e){
+             
+                document.getElementById("blog-site").removeChild(addPostForm);
+            });
+
        postButton.after(addPostForm);
     })                    
     } else {
@@ -281,10 +303,12 @@ const deleteCommentButton = ()=>{
     });
     return btn;
 }
+const addCommentForm = ()=>{
 
-const newCommentButton = (user)=>{
+}
+const newCommentButton = (authenticationCode)=>{
     let commentButton = document.createElement("button");
-    if (user!==null && user.admin){
+    if (authenticationCode===2){
         commentButton.innerText = "Reply";
         commentButton.addEventListener("click",function(e){
             //addCommentForm-refactor out
@@ -332,11 +356,9 @@ const newCommentButton = (user)=>{
 
 const editCommentForm = (commentId, commentText)=>{
     let form = document.createElement("form");
-    console.log(commentText);
-    form.innerHTML+=`<button type='submit' >Update Comment</button><textarea id='${commentId}-edit-text' name='edit-comment-text' className='edit-comment-form' >`
-   // document.getElementById(commentId+"-edit-text").defaultValue = commentText;
-   //add in defeault value
-    console.log(document.getElementById('604059f474ca5103583b72b7-edit-text'));
+    console.log(`comment Text ${commentText}`);
+    form.innerHTML+=`<button type='submit' >Update Comment</button><textarea id='${commentId}-edit-text' name='edit-comment-text' className='edit-comment-form' >${commentText}</textarea>`
+  
     form.addEventListener("submit", function(e){
         e.preventDefault();
         console.log();
@@ -379,7 +401,7 @@ const editCommentButton = (comment)=>{
 
     btn.addEventListener("click", function(e){
         let commentId = comment.id;
-        let commentText = comment.querySelector("h3");
+        let commentText = comment.querySelector("h3");     
        e.target.parentNode.replaceChild(editCommentForm(commentId, commentText.innerText), commentText);
 
     });
@@ -397,12 +419,11 @@ const commentLayout = (comment)=>{
     return commContainer;
 }
 
-const displayPosts=({user, results}, commentArr)=>{
-    //console.log(user);
+const displayPosts=({authenticationCode, results}, commentArr)=>{
     results.forEach((p)=>{
         let el = postLayout(p);
       //addComment 
-      el.appendChild(newCommentButton(user));
+      el.appendChild(newCommentButton(authenticationCode));
      //include edit button
      el.appendChild(editPostButton());
      //include delete button
@@ -416,7 +437,7 @@ const displayPosts=({user, results}, commentArr)=>{
       
       document.getElementById("blog-site").appendChild(el);
      });
-     newPostButton(user);
+     newPostButton(authenticationCode);
     
 }
         //-Click on a post to see all of it (accordion style) + comments  + “Log in to Post”/“Log in to comment” button
@@ -500,12 +521,16 @@ const displayPosts=({user, results}, commentArr)=>{
                 setNewForm(data);
             }
            catch (error) {
-            console.log(data);
+            console.log(error);
             document.getElementById("register-login-errors").innerText = error;
            }
             
     });
-   
+   document.getElementById("logout").addEventListener("click",(e)=>{
+       fetch(URL+"/logout").then(data=>{
+           renderPage();
+       })
+   })
     function setNewForm({registered}){
         if (registered){
             document.getElementById("register-or-login-form").style.display = "none";
@@ -528,7 +553,7 @@ const displayPosts=({user, results}, commentArr)=>{
 
     //with fetch get a promise back and based on whether the response if true/false, build a certain form
     
-    //if uthere's no authneticaton token
+    //if there's no authneticaton token
 function renderPage(){
     if (!localStorage.getItem("token")){
         //fix error here after
@@ -545,6 +570,6 @@ function renderPage(){
 }
 
 renderPage();
-    </script>
+</script>
 </body>
 </html>
