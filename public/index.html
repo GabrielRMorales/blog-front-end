@@ -75,12 +75,16 @@
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
     <script type="text/javascript">
 //new posts don't show reply buttons
+//make sure the edit commnets/post don't replace the child so much as edit the text upon updating
 
-//doesn't logout properly
+//edit commet form shouldn't replace text?
 
-//close buttons for edit post, edit comment, new comment-it should not replace, but rather add these in...
-//that way it can delete them without affecting the comments/posts themselves until they are changed
-//but make sure that buttons like "edit post" become moot if another is already open for that commnet/post
+//doesn't logout properly-fix all the login stuff
+
+
+//maybe these are due to being logged out??
+//can't edit posts!!
+//can't add comment!
 
 //show errors
 //the pre-register/login form bugs...ie duplicate forms
@@ -137,6 +141,9 @@ const postLayout=(postData)=>{
     postStatus.innerText = postData.published ? "published" : "unpublished" ;
     postStatus.className = "post-status";
     postContainer.appendChild(postStatus);   
+    let postControls = document.createElement("section");
+    postControls.className="post-controls";
+    postContainer.appendChild(postControls);
     postContainer.id = postData._id;
    
     return postContainer;
@@ -146,6 +153,7 @@ const editPostForm = (title, text, published)=>{
     let form = document.createElement("form");
     //edit form needs a close btn too
     form.className = "edit-post-form";
+    form.innerHTML+="<div class='close-form' >X</div>";
     form.innerHTML+="<label for='edit-form-title'>Title:</label>";
     form.innerHTML+=`<input type='text' class='edit-form-title' value='${title}' name='title' />`
     form.innerHTML+="<label for='edit-form-text'>Text:</label>";
@@ -155,6 +163,9 @@ const editPostForm = (title, text, published)=>{
     form.innerHTML+=`<input type="radio" name="post-status" class="edit-form-unpublished" ${published ==="unpublished"? "checked" : "" }>`;
     form.innerHTML+="<label for='edit-form-unpublished'>Unpublished</label>"
     form.innerHTML+="<input type='submit' class='update-post-btn' value='Update Post' />"
+    form.querySelector(".close-form").addEventListener("click",function(e){             
+        e.target.parentNode.parentNode.removeChild(e.target.parentNode);
+    });
     return form;
 }
 const editPostButton = ()=>{
@@ -163,12 +174,15 @@ const editPostButton = ()=>{
     btn.innerText = "Edit Post";
     //addeventlistener based on id
     btn.addEventListener("click",function(e){
-        let targetEl = document.getElementById(e.target.parentNode.id);     
+        let targetEl = document.getElementById(e.target.parentNode.parentNode.id);     
         let title, text, published;
         [title, text, published] = [targetEl.querySelector(".post-title").innerText,
         targetEl.querySelector(".post-text").innerText, targetEl.querySelector(".post-status").innerText];
-        targetEl.innerHTML = "";
-        targetEl.appendChild(editPostForm(title, text, published));
+        //targetEl.innerHTML = ""; should maintain comments while updating
+        if (!targetEl.querySelector(".post-controls").querySelector(".edit-post-form")){
+            targetEl.querySelector(".post-controls").appendChild(editPostForm(title, text, published));
+        }
+       
         targetEl.querySelector(".edit-post-form").addEventListener("submit",function(e){
             e.preventDefault();
             //close form
@@ -178,7 +192,6 @@ const editPostButton = ()=>{
             let text = targetEl.querySelector(".edit-form-text").value;
             let published = targetEl.querySelector("input[name='post-status']:checked").value;
             let postId = e.target.parentNode.id;
-            console.log(e.target.parentNode.id);
            fetch(URL+"/posts/edit/"+e.target.parentNode.id, {
                 method: "PUT",
                 headers: {
@@ -189,6 +202,7 @@ const editPostButton = ()=>{
             .then(data=>{
                 //if err send back
                 //
+                //should maintain comments after updating
                 console.log(data);                
                 //update post DOM
                 targetEl.parentNode.replaceChild(postLayout(data), targetEl);
@@ -199,10 +213,10 @@ const editPostButton = ()=>{
                 updatedPost.appendChild(deletePostButton());
 
             }).catch(err=>console.log(err));
-            
-            
+                        
         })
     });
+    
 
    return btn;
 
@@ -234,16 +248,17 @@ const addPostForm=()=>{
                     let el = postLayout(data);
                     document.getElementById("blog-site").appendChild(el);
                     e.target.parentNode.removeChild(e.target);
-                    el.appendChild(newCommentButton());
-                    el.appendChild(editPostButton());
-                    el.appendChild(deletePostButton());
+                    let controls = el.querySelector(".post-controls")
+                    controls.appendChild(newCommentButton());
+                    controls.appendChild(editPostButton());
+                    controls.appendChild(deletePostButton());
 
                     //if failure, add errors to #post-form-errors
                 })
                 .catch(err=>console.log(err));
             })
-            form.querySelector(".close-form").addEventListener("click",function(e){             
-                document.getElementById("blog-site").removeChild(form);
+            form.querySelector(".close-form").addEventListener("click",function(e){     
+                e.target.parentNode.parentNode.removeChild(e.target.parentNode);
             });
 
     return form;
@@ -352,14 +367,18 @@ const newCommentButton = (authenticationCode)=>{
         commentButton.innerText = "Reply";
         commentButton.addEventListener("click",function(e){
             let postId=e.target.parentNode.id;
-            if (!e.target.parentNode.querySelector(".add-comment-form")){
-                e.target.parentNode.appendChild(addCommentForm(postId));
+            if (!e.target.parentNode.parentNode.querySelector(".add-comment-form")){
+                e.target.parentNode.after(addCommentForm(postId));
             }
         });
     }
     else {
         //log in to reply
         commentButton.innerText="Login To Reply";
+        commentButton.addEventListener("click",function(e){
+            document.getElementById("register-or-login-form").style.display="block";
+            //add here
+        })
     }
 
     return commentButton;
@@ -369,7 +388,7 @@ const newCommentButton = (authenticationCode)=>{
 const editCommentForm = (commentId, commentText)=>{
     let form = document.createElement("form");
     console.log(`comment Text ${commentText}`);
-    form.innerHTML+=`<button type='submit' >Update Comment</button><textarea id='${commentId}-edit-text' name='edit-comment-text' className='edit-comment-form' >${commentText}</textarea>`
+    form.innerHTML+=`<div class="close-form">X</div><button type='submit' >Update Comment</button><textarea id='${commentId}-edit-text' name='edit-comment-text' className='edit-comment-form' >${commentText}</textarea>`
   
     form.addEventListener("submit", function(e){
         e.preventDefault();
@@ -403,6 +422,9 @@ const editCommentForm = (commentId, commentText)=>{
             });        
 
     })
+    form.querySelector(".close-form").addEventListener("click",function(e){             
+        e.target.parentNode.parentNode.removeChild(e.target.parentNode);
+    });
     return form;
 }
 
@@ -435,11 +457,12 @@ const displayPosts=({authenticationCode, results}, commentArr)=>{
     results.forEach((p)=>{
         let el = postLayout(p);
       //addComment 
-      el.appendChild(newCommentButton(authenticationCode));
+      let controls = el.querySelector(".post-controls");
+      controls.appendChild(newCommentButton(authenticationCode));
      //include edit button
-     el.appendChild(editPostButton());
+     controls.appendChild(editPostButton());
      //include delete button
-     el.appendChild(deletePostButton());
+     controls.appendChild(deletePostButton());
      //add in comments
         //commentArr
       let commentList = sortComments(commentArr, p);
@@ -540,6 +563,7 @@ const displayPosts=({authenticationCode, results}, commentArr)=>{
     });
    document.getElementById("logout").addEventListener("click",(e)=>{
        fetch(URL+"/logout").then(data=>{
+           //this won't work as you think-it just appends the intializing data
            renderPage();
        })
    })
