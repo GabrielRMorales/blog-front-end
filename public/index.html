@@ -75,9 +75,12 @@
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
     <script type="text/javascript">
 //new posts don't show reply buttons
+
 //doesn't logout properly
-//refactor out editCommentForm
-//close buttons for edit post, edit comment, new comment
+
+//close buttons for edit post, edit comment, new comment-it should not replace, but rather add these in...
+//that way it can delete them without affecting the comments/posts themselves until they are changed
+//but make sure that buttons like "edit post" become moot if another is already open for that commnet/post
 
 //show errors
 //the pre-register/login form bugs...ie duplicate forms
@@ -205,23 +208,13 @@ const editPostButton = ()=>{
 
 }
 
-const newPostButton = (authenticationCode)=>{
+const addPostForm=()=>{
 
-    let postButton = document.createElement("button");
-    let siteChild = document.getElementById("blog-site").firstChild;
-    siteChild.parentNode.insertBefore(postButton, siteChild);
-//if user is NOT admin    
-if (authenticationCode===2) {
-    postButton.innerText = "Add New Post";
-    postButton.addEventListener("click", function(){
-        //show create post form
-        //refactor addPostForm to its own function
-        let addPostForm = document.createElement("form");
-           addPostForm.id="create-post";
-                       
-            addPostForm.innerHTML+='<div class="close-form">X</div><div id="post-form-errors"></div><label for="post-title">Title:</label><input type="text" id="post-title" name="title" /><input type="submit" value="Post"><textarea id="post-text" name="text" form="create-post" />';
+    let form = document.createElement("form");
+           form.id="create-post";  
+           form.innerHTML+='<div class="close-form">X</div><div id="post-form-errors"></div><label for="post-title">Title:</label><input type="text" id="post-title" name="title" /><input type="submit" value="Post"><textarea id="post-text" name="text" form="create-post" />';
 
-            addPostForm.addEventListener("submit",function(e){
+           form.addEventListener("submit",function(e){
                 e.preventDefault();
                 //fetch post request to /posts using form id data
                 fetch(URL+"/posts", {
@@ -249,12 +242,28 @@ if (authenticationCode===2) {
                 })
                 .catch(err=>console.log(err));
             })
-            addPostForm.querySelector(".close-form").addEventListener("click",function(e){
-             
-                document.getElementById("blog-site").removeChild(addPostForm);
+            form.querySelector(".close-form").addEventListener("click",function(e){             
+                document.getElementById("blog-site").removeChild(form);
             });
 
-       postButton.after(addPostForm);
+    return form;
+}
+
+const newPostButton = (authenticationCode)=>{
+
+    let postButton = document.createElement("button");
+    let siteChild = document.getElementById("blog-site").firstChild;
+    siteChild.parentNode.insertBefore(postButton, siteChild);
+//if user is NOT admin    
+if (authenticationCode===2) {
+    postButton.innerText = "Add New Post";
+    postButton.addEventListener("click", function(e){
+        //show create post form
+        if (!e.target.parentNode.querySelector("#create-post")){
+            let newForm = addPostForm();        
+            postButton.after(newForm);
+        }
+        
     })                    
     } else {
         postButton.innerText = "Log in to Post";
@@ -303,47 +312,50 @@ const deleteCommentButton = ()=>{
     });
     return btn;
 }
-const addCommentForm = ()=>{
-
+const addCommentForm = (postId)=>{
+    let form = document.createElement("form");
+    form.classList.add("add-comment-form")
+    form.innerHTML+=`<div class="close-form">X</div><button type='submit'>Add Comment</button><textarea id='${postId}-comment' name='commentText' class='comment-text'  />`
+    
+    form.addEventListener("submit", function(e){
+        e.preventDefault();                
+        fetch(URL+"/comments", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${localStorage.getItem("token")}`
+            },
+            body: JSON.stringify({
+                text: document.getElementById(postId+"-comment").value,
+                postId: postId
+            })
+        }).then(data=>data.json())
+        .then(comment=>{
+            e.target.parentNode.appendChild(commentLayout(comment));
+            e.target.parentNode.removeChild(e.target);
+            
+        })
+        .catch(err=>console.log(err));
+        
+    })
+    //addCommentForm also needs a close button to cancel
+    form.querySelector(".close-form").addEventListener("click",function(e){             
+        e.target.parentNode.parentNode.removeChild(e.target.parentNode);
+    });
+    return form
+    
+    
 }
 const newCommentButton = (authenticationCode)=>{
     let commentButton = document.createElement("button");
     if (authenticationCode===2){
         commentButton.innerText = "Reply";
         commentButton.addEventListener("click",function(e){
-            //addCommentForm-refactor out
-            let addCommentForm = document.createElement("form");
-            //addCommentForm.classList.add("addCo")
             let postId=e.target.parentNode.id;
-            addCommentForm.innerHTML+=`<button type='submit'>Add Comment</button><textarea id='${postId}-comment' name='commentText' class='comment-text'  />`
-
-            e.target.parentNode.appendChild(addCommentForm);
-
-            addCommentForm.addEventListener("submit", function(e){
-                e.preventDefault();                
-                fetch(URL+"/comments", {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        "Authorization": `Bearer ${localStorage.getItem("token")}`
-                    },
-                    body: JSON.stringify({
-                        text: document.getElementById(postId+"-comment").value,
-                        postId: postId
-                    })
-                }).then(data=>data.json())
-                .then(comment=>{
-                    e.target.parentNode.appendChild(commentLayout(comment));
-                    e.target.parentNode.removeChild(e.target);
-                    
-                })
-                .catch(err=>console.log(err));
-
-            })
-            //addCommentForm also needs a close button to cancel
-
+            if (!e.target.parentNode.querySelector(".add-comment-form")){
+                e.target.parentNode.appendChild(addCommentForm(postId));
+            }
         });
-
     }
     else {
         //log in to reply
