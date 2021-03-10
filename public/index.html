@@ -5,34 +5,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Blog-Front End</title>
-    <style>
-        #register-or-login-form {
-            display: none;
-            position: absolute;
-            top: 300px;
-            left: 300px;
-            opacity: .5;
-        }
-        #register-form { 
-            display: none;
-            position: absolute;
-            top: 300px;
-            left: 300px;
-            opacity: .5;
-        }
-        #login-form {
-            display: none;
-            position: absolute;
-            top: 300px;
-            left: 300px;
-            opacity: .5;
-        }
-        section,.comment {
-            border: 1px solid black;
-            padding: 10px;
-        }
-        
-    </style>
+    <link href="./styles.css" rel="stylesheet" type="text/css" /> 
 </head>
 <body></body>
     <header>
@@ -122,7 +95,7 @@ const deletePostButton = ()=>{
 const postLayout=(postData)=>{
     let postContainer = document.createElement("section");   
     postContainer.className = "post-container";
-    let postTitle = document.createElement("h2")
+    let postTitle = document.createElement("p")
     postTitle.innerText = postData.title;
     postTitle.className = "post-title";
     postContainer.appendChild(postTitle);
@@ -131,7 +104,7 @@ const postLayout=(postData)=>{
     postText.className = "post-text";
     postContainer.appendChild(postText);
     let postStatus = document.createElement("p");
-    postStatus.innerText = postData.published ? "published" : "unpublished" ;
+    postStatus.innerText = postData.published ? "Status: published" : "Status: unpublished" ;
     postStatus.className = "post-status";
     postContainer.appendChild(postStatus);   
     let postControls = document.createElement("section");
@@ -155,7 +128,7 @@ const editPostForm = (title, text, published)=>{
     form.innerHTML+="<label for='edit-form-published'>Published</label>"
     form.innerHTML+=`<input type="radio" name="post-status" class="edit-form-unpublished" ${published ==="unpublished"? "checked" : "" }>`;
     form.innerHTML+="<label for='edit-form-unpublished'>Unpublished</label>"
-    form.innerHTML+="<input type='submit' class='update-post-btn' value='Update Post' />"
+    form.innerHTML+="<button type='submit' class='edit-post-btn'>Update Post</button>"
     form.querySelector(".close-form").addEventListener("click",function(e){             
         e.target.parentNode.parentNode.removeChild(e.target.parentNode);
     });
@@ -223,8 +196,8 @@ const editPostButton = ()=>{
 const addPostForm=()=>{
 
     let form = document.createElement("form");
-           form.id="create-post";  
-           form.innerHTML+='<div class="close-form">X</div><div id="post-form-errors"></div><label for="post-title">Title:</label><input type="text" id="post-title" name="title" /><input type="submit" value="Post"><textarea id="post-text" name="text" form="create-post" />';
+           form.id="add-post-form";  
+           form.innerHTML+='<div class="close-form">X</div><div id="post-form-errors"></div><label for="post-title">Title:</label><input type="text" id="post-title" name="title" /><button type="submit" id="add-post-btn">Post</button><textarea id="post-text" name="text" form="add-post-form" />';
 
            form.addEventListener("submit",function(e){
                 e.preventDefault();
@@ -272,14 +245,15 @@ const newPostButton = (authenticationCode)=>{
     let siteChild = document.getElementById("blog-site").firstChild;
     siteChild.parentNode.insertBefore(postButton, siteChild);
 //if user is NOT admin    
-if (authenticationCode===2) {
-    postButton.innerText = "Add New Post";
-    postButton.addEventListener("click", function(e){
-        //show create post form
-        if (!e.target.parentNode.querySelector("#create-post")){
-            let newForm = addPostForm();        
-            postButton.after(newForm);
-        }
+    if (authenticationCode===2) {
+        postButton.innerText = "Add New Post";
+        postButton.id = "add-new-post";
+        postButton.addEventListener("click", function(e){
+            //show create post form
+            if (!e.target.parentNode.querySelector("#add-post-form")){
+                let newForm = addPostForm();        
+                postButton.after(newForm);
+            }
         
     })                    
     } else {
@@ -290,7 +264,8 @@ if (authenticationCode===2) {
         });
                         
     }   
-        
+    return postButton;  
+
 }
 
 const getComments = async (url)=>{
@@ -332,7 +307,7 @@ const deleteCommentButton = ()=>{
 const addCommentForm = (postId)=>{
     let form = document.createElement("form");
     form.classList.add("add-comment-form")
-    form.innerHTML+=`<div class="close-form">X</div><button type='submit'>Add Comment</button><textarea id='${postId}-comment' name='commentText' />`
+    form.innerHTML+=`<div class="close-form">X</div><button type='submit' class="add-comment-btn">Add Comment</button><textarea id='${postId}-comment' name='commentText' />`
     
     form.addEventListener("submit", function(e){
         e.preventDefault();                
@@ -389,7 +364,7 @@ const newCommentButton = (authenticationCode)=>{
 const editCommentForm = (commentId, commentText)=>{
     let form = document.createElement("form");
     form.classList.add("edit-comment-form");
-    form.innerHTML+=`<div class="close-form">X</div><button type='submit' >Update Comment</button><textarea id='${commentId}-edit-text' name='edit-comment-text' className='edit-comment-form' >${commentText}</textarea>`
+    form.innerHTML+=`<div class="close-form">X</div><button type='submit' class="edit-comment-btn">Update Comment</button><textarea id='${commentId}-edit-text' name='edit-comment-text' className='edit-comment-form' >${commentText}</textarea>`
   
     form.addEventListener("submit", function(e){
         e.preventDefault();
@@ -435,7 +410,7 @@ const editCommentButton = (comment)=>{
 
     btn.addEventListener("click", function(e){
         let commentId = comment.id;
-        let commentText = comment.querySelector("h3");     
+        let commentText = comment.querySelector("p");     
         if (!e.target.parentNode.querySelector(".edit-comment-form")){
             e.target.parentNode.appendChild(editCommentForm(commentId, commentText.innerText));
         }
@@ -448,10 +423,11 @@ const commentLayout = (comment)=>{
     let commContainer = document.createElement("div");
     commContainer.className = "comment";
     commContainer.id=`${comment._id}`;
-    commContainer.innerHTML+=`<p>${comment.user.usertag}:</p>`;
-    commContainer.innerHTML+=`<h3 class="comment-text">${comment.text}</h3>`;   
-    commContainer.appendChild(deleteCommentButton());
-    commContainer.appendChild(editCommentButton(commContainer));
+    commContainer.innerHTML+=`<p class="comment-text">${comment.text}</p>`; 
+    commContainer.innerHTML+=`<p>Posted by <span class="comment-data">${comment.user.usertag}</span> on <span class="comment-data">${comment.timestamp}</span></p>`;      
+    commContainer.innerHTML+="<div class='comment-controls'></div>";
+    commContainer.querySelector(".comment-controls").appendChild(deleteCommentButton());
+    commContainer.querySelector(".comment-controls").appendChild(editCommentButton(commContainer));
     return commContainer;
 }
 
@@ -474,7 +450,7 @@ const displayPosts=({authenticationCode, results}, commentArr)=>{
       
       document.getElementById("blog-site").appendChild(el);
      });
-     newPostButton(authenticationCode);
+     document.querySelector("header").appendChild(newPostButton(authenticationCode));
     
 }
         //-Click on a post to see all of it (accordion style) + comments  + “Log in to Post”/“Log in to comment” button

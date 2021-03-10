@@ -1,0 +1,82 @@
+%hidden-forms {
+    display: none;
+    position: absolute;
+    top: 300px;
+    left: 300px;
+    opacity: .5;
+}
+$primary-color: #b51e3e;
+
+body {
+    margin: 0;
+    padding: 0;
+    background-color: $primary-color;
+    
+}
+body, button, input, textarea {
+    font-family:Arial, Helvetica, sans-serif;
+    font-size: 15px;
+    
+}
+
+header {
+    padding: 10px 0;
+    margin: 0 10px;
+    display: flex;
+}
+#blog-site {
+    background-color: white;
+    margin: 0 10px;
+  
+}
+#register-or-login-form, #register-form,#login-form {
+    @extend %hidden-forms;
+}
+#logout {
+    order: 5;
+    justify-self: flex-end;
+}
+button {   
+    padding: 10px;
+    font-weight: bold;
+    &:hover {
+            background-color: rgb(59, 59, 59);
+            color: white;
+        }
+}
+section, .comment {
+    border: 1px solid black;
+    padding: 10px;
+}
+#add-post-form, .edit-post-form, .add-comment-form, .edit-comment-form {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    margin: 0 10px;
+}
+.close-form {
+    align-self: flex-end;
+}
+#add-post-btn, .edit-post-btn, .add-comment-btn, .edit-comment-btn {
+    order: 5;
+}
+.post-title {
+    margin:10px 0 ;
+    font-size: 24px;
+    font-weight: bold;
+}
+.post-text {
+    font-size: 16px;
+}
+.post-controls {
+    background-color: $primary-color;
+}
+.comment-controls {
+    padding: 10px;
+    background-color: $primary-color;
+}
+.comment-data {
+    color: $primary-color;
+    font-weight: bold;
+
+}

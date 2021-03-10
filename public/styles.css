@@ -1,0 +1,103 @@
+#register-or-login-form, #register-form, #login-form {
+  display: none;
+  position: absolute;
+  top: 300px;
+  left: 300px;
+  opacity: .5;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: #b51e3e;
+}
+
+body, button, input, textarea {
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 15px;
+}
+
+header {
+  padding: 10px 0;
+  margin: 0 10px;
+  display: -webkit-box;
+  display: -ms-flexbox;
+  display: flex;
+}
+
+#blog-site {
+  background-color: white;
+  margin: 0 10px;
+}
+
+#logout {
+  -webkit-box-ordinal-group: 6;
+      -ms-flex-order: 5;
+          order: 5;
+  justify-self: flex-end;
+}
+
+button {
+  padding: 10px;
+  font-weight: bold;
+}
+
+button:hover {
+  background-color: #3b3b3b;
+  color: white;
+}
+
+section, .comment {
+  border: 1px solid black;
+  padding: 10px;
+}
+
+#add-post-form, .edit-post-form, .add-comment-form, .edit-comment-form {
+  display: -webkit-box;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-box-orient: vertical;
+  -webkit-box-direction: normal;
+      -ms-flex-direction: column;
+          flex-direction: column;
+  -webkit-box-align: start;
+      -ms-flex-align: start;
+          align-items: flex-start;
+  margin: 0 10px;
+}
+
+.close-form {
+  -ms-flex-item-align: end;
+      align-self: flex-end;
+}
+
+#add-post-btn, .edit-post-btn, .add-comment-btn, .edit-comment-btn {
+  -webkit-box-ordinal-group: 6;
+      -ms-flex-order: 5;
+          order: 5;
+}
+
+.post-title {
+  margin: 10px 0;
+  font-size: 24px;
+  font-weight: bold;
+}
+
+.post-text {
+  font-size: 16px;
+}
+
+.post-controls {
+  background-color: #b51e3e;
+}
+
+.comment-controls {
+  padding: 10px;
+  background-color: #b51e3e;
+}
+
+.comment-data {
+  color: #b51e3e;
+  font-weight: bold;
+}
+/*# sourceMappingURL=styles.css.map */
