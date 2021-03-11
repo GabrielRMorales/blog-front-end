@@ -9,9 +9,11 @@
 </head>
 <body></body>
     <header>
-        <button id="logout">Logout</button>
+        <button id="logout-btn">Logout</button>
+        <button id="login-btn">Login</button>
     </header>
     <main id="blog-site">
+        <p id="loading-note">Loading...</p>
         <!-- include skeleton layout, like register buttons-->
         <form id="register-or-login-form">
             <div id="close-register-login" class="close-form">X</div>
@@ -48,13 +50,14 @@
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
     <script type="text/javascript">
 //new posts don't show reply buttons
+//if post has comments should be handled differently
 
 //doesn't logout properly-fix all the login stuff
 //the pre-register/login form bugs...ie duplicate forms-see 569 and 507ish
 
 //show errors?
 
-//refactor it as needed-as is, this violates DRY...
+//refactor it as needed-as is, this currently violates DRY...
 //stylize it!
 
 const URL = "http://localhost:3000";
@@ -117,7 +120,6 @@ const postLayout=(postData)=>{
 const editPostForm = (title, text, published)=>{
      
     let form = document.createElement("form");
-    //edit form needs a close btn too
     form.className = "edit-post-form";
     form.innerHTML+="<div class='close-form' >X</div>";
     form.innerHTML+="<label for='edit-form-title'>Title:</label>";
@@ -238,7 +240,7 @@ const addPostForm=()=>{
 
     return form;
 }
-
+//refactor this so it doesn't rely on authenticationCode
 const newPostButton = (authenticationCode)=>{
 
     let postButton = document.createElement("button");
@@ -276,7 +278,6 @@ const getComments = async (url)=>{
 const sortComments = (comments, post)=>{
     if (comments){
         return comments.filter(c=>c.post===post._id)
-
     }
   
 }
@@ -337,9 +338,10 @@ const addCommentForm = (postId)=>{
     
     
 }
-const newCommentButton = (authenticationCode)=>{
+//refactor this so it doesn't rely on authenticationCode
+const newCommentButton = (authenticationCode=0)=>{
     let commentButton = document.createElement("button");
-    if (authenticationCode===2){
+    if (authenticationCode>0){
         commentButton.innerText = "Reply";
         commentButton.addEventListener("click",function(e){
             let postId=e.target.parentNode.parentNode.id;           
@@ -425,9 +427,7 @@ const commentLayout = (comment)=>{
     commContainer.id=`${comment._id}`;
     commContainer.innerHTML+=`<p class="comment-text">${comment.text}</p>`; 
     commContainer.innerHTML+=`<p>Posted by <span class="comment-data">${comment.user.usertag}</span> on <span class="comment-data">${comment.timestamp}</span></p>`;      
-    commContainer.innerHTML+="<div class='comment-controls'></div>";
-    commContainer.querySelector(".comment-controls").appendChild(deleteCommentButton());
-    commContainer.querySelector(".comment-controls").appendChild(editCommentButton(commContainer));
+    commContainer.innerHTML+="<div class='comment-controls'></div>";   
     return commContainer;
 }
 
@@ -453,8 +453,7 @@ const displayPosts=({authenticationCode, results}, commentArr)=>{
      document.querySelector("header").appendChild(newPostButton(authenticationCode));
     
 }
-        //-Click on a post to see all of it (accordion style) + comments  + “Log in to Post”/“Log in to comment” button
-
+  
    
 //set Event listeners
 //make thse into a single configurable function-OR set the close-form class to close-display none
@@ -462,7 +461,9 @@ const displayPosts=({authenticationCode, results}, commentArr)=>{
         form.addEventListener("click",function(){
             document.getElementById("register-or-login-form").style.display="none";
         });
-        
+        document.getElementById("login-btn").addEventListener("click",function(){
+            document.getElementById("register-or-login-form").style.display="block";
+        })
         //set eventlistener for register/login form-should send fetch request
         document.getElementById("login-form").addEventListener("submit",function(e){
             e.preventDefault();
@@ -541,8 +542,15 @@ const displayPosts=({authenticationCode, results}, commentArr)=>{
     });
    document.getElementById("logout").addEventListener("click",(e)=>{
        fetch(URL+"/logout").then(data=>{
-           //this won't work as you think-it just appends the intializing data
-           renderPage();
+        //should remove token and remove controls (or at worst basic rerender page)
+            if (localStorage.getItem("token")){
+                localStorage.removeItem("token");
+            }   
+            document.getElementById("logout-btn").style.display="none";
+            document.getElementById("login-btn").style.display="block";
+            removePostControls();
+            removeCommentControls();  
+
        })
    })
     function setNewForm({registered}){
@@ -567,13 +575,11 @@ const displayPosts=({authenticationCode, results}, commentArr)=>{
 
     //with fetch get a promise back and based on whether the response if true/false, build a certain form
     
-    //if there's no authneticaton token
+    //if there's no authneticaton token-alter
 function renderPage(){
     if (!localStorage.getItem("token")){
         //fix error here after
-        Promise.all([getPosts(URL), getComments(URL)]).then(values=>{
-            displayPosts(values[0], values[1]);
-        }).catch(err=>console.log(err));
+        
     } 
       //else if user is logged in
     else if (localStorage.getItem("token")){
@@ -581,6 +587,68 @@ function renderPage(){
             displayPosts(values[0],values[1]);
         }).catch(err=>console.log(err));
     }  
+}
+
+function defaultRenderCall(){
+    Promise.all([getPosts(URL), getComments(URL)]).then(values=>{
+
+       pageLayout(values[0], values[1]);
+
+        }).catch(err=>console.log(err));
+
+}
+
+//refactor out authenticationCode
+//also refactor this out to add on items rather than the entire thing
+function pageLayout({authenticationCode, postResults}, commentArr){
+    document.getElementById("blog-site").removeChild(document.getElementById("loading-note"));
+    postResults.forEach((p)=>{
+        let el = postLayout(p);
+
+        let commentList = sortComments(commentArr, p);
+        commentList.forEach(comment=>{
+            let commentEl=commentLayout(comment);
+            let commentControls = commentEl.querySelector(".comment-controls");
+            if (authenticationCode>0){
+                //also ensure that the comments belong to user, but if admin, all OK
+                commentControls.appendChild(deleteCommentButton());
+                commentControls.appendChild(editCommentButton(commentEl));
+            }
+            el.appendChild();   
+        })
+        if (authenticationCode>0){
+            let controls = el.querySelector(".post-controls");
+            controls.appendChild(newCommentButton(authenticationCode));
+        }      
+        if (authenticationCode>1){
+            document.querySelector("header").appendChild(newPostButton(authenticationCode));
+            //include edit button
+            controls.appendChild(editPostButton());
+            //include delete button
+            controls.appendChild(deletePostButton());
+        }
+             
+      document.getElementById("blog-site").appendChild(el);
+     });    
+
+}
+//later, make this only remove edit/delete posts, but not reply
+//might also need to remove open post/comment forms
+
+//removePostControls
+function removePostControls(){
+    let controls = document.querySelectorAll(".post-controls");
+    controls.forEach(control=>{
+        control.innerHTML="";
+    })
+}
+
+//removeCommentControls
+function removeCommentControls(){
+    let controls=document.querySelectorAll(".comment-controls");
+    controls.forEach(control=>{
+        control.innerHTML="";
+    })
 }
 
 renderPage();
