@@ -9,8 +9,11 @@
 </head>
 <body></body>
     <header>
-        <button id="logout-btn">Logout</button>
-        <button id="login-btn">Login</button>
+        <section id="header-controls">
+            <button id="logout-btn">Logout</button>
+            <button id="login-btn">Login</button>
+        </section>
+        <section id="header-forms"></section>
     </header>
     <main id="blog-site">
         <p id="loading-note">Loading...</p>
@@ -57,8 +60,9 @@
 
 //show errors?
 
+//style newCommentForm and header
+
 //refactor it as needed-as is, this currently violates DRY...
-//stylize it!
 
 const URL = "http://localhost:3000";
 
@@ -67,7 +71,11 @@ const getPosts = async (url)=>{
         let postData = await fetch(url);
         return await postData.json();
     }
-
+const displayError = (err)=>{
+    let message = document.createElement("p");
+    message.innerText = err.msg || error.message;
+    return message;
+}
 const deletePostButton = ()=>{
     let btn = document.createElement("button");
     btn.className = "delete-post-btn";
@@ -106,10 +114,13 @@ const postLayout=(postData)=>{
     postText.innerText = postData.text;
     postText.className = "post-text";
     postContainer.appendChild(postText);
-    let postStatus = document.createElement("p");
-    postStatus.innerText = postData.published ? "Status: published" : "Status: unpublished" ;
-    postStatus.className = "post-status";
-    postContainer.appendChild(postStatus);   
+    let outerPostStatus = document.createElement("p");
+    outerPostStatus.innerText="Status: ";
+    let innerPostStatus = document.createElement("span");
+    innerPostStatus.innerText += postData.published ? "published" : "unpublished" ;
+    innerPostStatus.className = "post-status";
+    outerPostStatus.appendChild(innerPostStatus);
+    postContainer.appendChild(outerPostStatus);   
     let postControls = document.createElement("section");
     postControls.className="post-controls";
     postContainer.appendChild(postControls);
@@ -118,7 +129,7 @@ const postLayout=(postData)=>{
     return postContainer;
 }
 const editPostForm = (title, text, published)=>{
-     
+    console.log(published);
     let form = document.createElement("form");
     form.className = "edit-post-form";
     form.innerHTML+="<div class='close-form' >X</div>";
@@ -166,7 +177,6 @@ const editPostButton = ()=>{
             }
            // let published = targetEl.querySelector("input[name='post-status']:checked").checked.value;
             let postId = e.target.parentNode.parentNode.id;
-           console.log(published);
            fetch(URL+"/posts/edit/"+postId, {
                 method: "PUT",
                 headers: {
@@ -176,14 +186,18 @@ const editPostButton = ()=>{
             }).then(data=>data.json())
             .then(data=>{
                 //if err send back
-                //
-                //should maintain comments after updating              
-                //update post DOM
-                targetEl.querySelector(".post-title").innerText = data.title;
-                targetEl.querySelector(".post-text").innerText = data.text;
-                targetEl.querySelector(".post-status").innerText = data.published ? "published" : "unpublished";
-                targetEl.querySelector(".post-controls").removeChild(targetEl.querySelector(".edit-post-form"))
-               
+                console.log(data);
+                //figure this out!
+               /* if (data.errors || data.error) {
+                     targetEl.querySelector(".edit-post-form").appendChild(displayError(data.errors || data.error));
+                }
+               else if (!data.errors || !data.error){*/
+                    //update post DOM
+                    targetEl.querySelector(".post-title").innerText = data.title;
+                    targetEl.querySelector(".post-text").innerText = data.text;
+                    targetEl.querySelector(".post-status").innerText = data.published ? "published" : "unpublished";
+                    targetEl.querySelector(".post-controls").removeChild(targetEl.querySelector(".edit-post-form"))
+              return data;
 
             }).catch(err=>console.log(err));
                         
@@ -243,10 +257,8 @@ const addPostForm=()=>{
 //refactor this so it doesn't rely on authenticationCode
 const newPostButton = (authenticationCode)=>{
 
-    let postButton = document.createElement("button");
-    let siteChild = document.getElementById("blog-site").firstChild;
-    siteChild.parentNode.insertBefore(postButton, siteChild);
-//if user is NOT admin    
+    let postButton = document.createElement("button");  
+
     if (authenticationCode===2) {
         postButton.innerText = "Add New Post";
         postButton.id = "add-new-post";
@@ -254,9 +266,8 @@ const newPostButton = (authenticationCode)=>{
             //show create post form
             if (!e.target.parentNode.querySelector("#add-post-form")){
                 let newForm = addPostForm();        
-                postButton.after(newForm);
-            }
-        
+                document.getElementById("header-forms").appendChild(newForm);
+            }        
     })                    
     } else {
         postButton.innerText = "Log in to Post";
@@ -267,7 +278,7 @@ const newPostButton = (authenticationCode)=>{
                         
     }   
     return postButton;  
-
+    
 }
 
 const getComments = async (url)=>{
@@ -279,14 +290,69 @@ const sortComments = (comments, post)=>{
     if (comments){
         return comments.filter(c=>c.post===post._id)
     }
+    
+}
+const editCommentForm = (comment)=>{
+    let form = document.createElement("form");
+    form.classList.add("edit-comment-form");
+    console.log(comment);
+    let commentText = comment.querySelector(".comment-text").innerText;
+    form.innerHTML+=`<div class="close-form">X</div><button type='submit' class="edit-comment-btn">Update Comment</button><textarea id='${comment.id}-edit-text' name='edit-comment-text' className='edit-comment-form' >${comment.querySelector(".comment-text").innerText}</textarea>`
   
+    form.addEventListener("submit", function(e){
+        e.preventDefault();
+        console.log();
+        let newInput = document.getElementById(`${comment.id}-edit-text`).value;
+
+        fetch(URL+"/comments/edit/"+comment.id, {
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${localStorage.getItem("token")}`
+            },
+            body: JSON.stringify({
+                text: newInput,
+                post: document.getElementById(comment.id).parentNode.parentNode.id
+            })
+       
+        }).then(data=>data.json()) 
+            .then(data=>{console.log(data)           
+            let prevComment = document.getElementById(comment.id);
+            prevComment.querySelector(".comment-text").innerText=data.text;
+            prevComment.querySelector(".comment-controls").removeChild(form);
+        
+            })
+            .catch(err=>{console.log(err)
+                form.appendChild("There was an error!");
+            });        
+
+    })
+    form.querySelector(".close-form").addEventListener("click",function(e){             
+        e.target.parentNode.parentNode.removeChild(e.target.parentNode);
+    });
+    return form;
+}
+
+const editCommentButton = (comment)=>{
+    
+    let btn=document.createElement("button");
+    btn.innerText = "Edit Comment";
+
+    btn.addEventListener("click", function(e){
+        // let commentId = comment.id;
+        // let commentText = comment.querySelector("p");     
+        if (!e.target.parentNode.querySelector(".edit-comment-form")){
+            e.target.parentNode.appendChild(editCommentForm(comment));
+        }
+    });
+    return btn;
 }
 
 const deleteCommentButton = ()=>{
     let btn = document.createElement("button");
     btn.innerHTML="Delete this comment";
     btn.addEventListener("click", function(e){
-        commentId=e.target.parentNode.id;
+        commentId=e.target.parentNode.parentNode.id;
         //fetch delete request
         fetch(URL+"/comments/delete/"+commentId,{
             method: "DELETE",
@@ -305,6 +371,7 @@ const deleteCommentButton = ()=>{
     });
     return btn;
 }
+
 const addCommentForm = (postId)=>{
     let form = document.createElement("form");
     form.classList.add("add-comment-form")
@@ -324,8 +391,13 @@ const addCommentForm = (postId)=>{
             })
         }).then(data=>data.json())
         .then(comment=>{
-            e.target.parentNode.appendChild(commentLayout(comment));
-            e.target.parentNode.removeChild(e.target);            
+            let newComment=commentLayout(comment);
+            form.parentNode.appendChild(newComment);
+            form.parentNode.removeChild(form); 
+            newComment.querySelector(".comment-controls").appendChild(deleteCommentButton());
+            //notice how deleteComment takes no param, but this does...
+            newComment.querySelector(".comment-controls").appendChild(editCommentButton(newComment));
+               
         })
         .catch(err=>console.log(err));
         
@@ -363,65 +435,8 @@ const newCommentButton = (authenticationCode=0)=>{
 
 }
 
-const editCommentForm = (commentId, commentText)=>{
-    let form = document.createElement("form");
-    form.classList.add("edit-comment-form");
-    form.innerHTML+=`<div class="close-form">X</div><button type='submit' class="edit-comment-btn">Update Comment</button><textarea id='${commentId}-edit-text' name='edit-comment-text' className='edit-comment-form' >${commentText}</textarea>`
-  
-    form.addEventListener("submit", function(e){
-        e.preventDefault();
-        console.log();
-        let newInput = document.getElementById(`${commentId}-edit-text`).value;
-
-        fetch(URL+"/comments/edit/"+commentId, {
-            method: "PUT",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${localStorage.getItem("token")}`
-            },
-            body: JSON.stringify({
-                text: newInput,
-                post: document.getElementById(commentId).parentNode.parentNode.id
-            })
-       
-        }).then(data=>data.json()) 
-            .then(data=>{console.log(data)           
-            let comment = document.getElementById(commentId);
-            comment.querySelector(".comment-text").innerText=data.text;
-            comment.removeChild(form);
-            // include an edited by user.name-this would require adding the field to the database   
-            /*let editNote = document.createElement("p");
-            editNote.innerText = `Edited by ${data.editingUser}`;   
-            comment.appendChild(editNote);*/
-            })
-            .catch(err=>{console.log(err)
-                form.appendChild("There was an error!");
-            });        
-
-    })
-    form.querySelector(".close-form").addEventListener("click",function(e){             
-        e.target.parentNode.parentNode.removeChild(e.target.parentNode);
-    });
-    return form;
-}
-
-const editCommentButton = (comment)=>{
-    
-    let btn=document.createElement("button");
-    btn.innerText = "Edit Comment";
-
-    btn.addEventListener("click", function(e){
-        let commentId = comment.id;
-        let commentText = comment.querySelector("p");     
-        if (!e.target.parentNode.querySelector(".edit-comment-form")){
-            e.target.parentNode.appendChild(editCommentForm(commentId, commentText.innerText));
-        }
-    });
-    return btn;
-}
 
 const commentLayout = (comment)=>{
-    // console.log(comment);
     let commContainer = document.createElement("div");
     commContainer.className = "comment";
     commContainer.id=`${comment._id}`;
@@ -430,7 +445,7 @@ const commentLayout = (comment)=>{
     commContainer.innerHTML+="<div class='comment-controls'></div>";   
     return commContainer;
 }
-
+/*
 const displayPosts=({authenticationCode, results}, commentArr)=>{
     results.forEach((p)=>{
         let el = postLayout(p);
@@ -450,9 +465,9 @@ const displayPosts=({authenticationCode, results}, commentArr)=>{
       
       document.getElementById("blog-site").appendChild(el);
      });
-     document.querySelector("header").appendChild(newPostButton(authenticationCode));
+     document.getElementById("header-controls").appendChild(newPostButton(authenticationCode));
     
-}
+}*/
   
    
 //set Event listeners
@@ -540,7 +555,7 @@ const displayPosts=({authenticationCode, results}, commentArr)=>{
            }
             
     });
-   document.getElementById("logout").addEventListener("click",(e)=>{
+   document.getElementById("logout-btn").addEventListener("click",(e)=>{
        fetch(URL+"/logout").then(data=>{
         //should remove token and remove controls (or at worst basic rerender page)
             if (localStorage.getItem("token")){
@@ -590,8 +605,8 @@ function renderPage(){
 }
 
 function defaultRenderCall(){
-    Promise.all([getPosts(URL), getComments(URL)]).then(values=>{
-
+    Promise.all([getData("/posts"), getData("/comments")]).then(values=>{
+        console.log(values);
        pageLayout(values[0], values[1]);
 
         }).catch(err=>console.log(err));
@@ -600,36 +615,36 @@ function defaultRenderCall(){
 
 //refactor out authenticationCode
 //also refactor this out to add on items rather than the entire thing
-function pageLayout({authenticationCode, postResults}, commentArr){
+function pageLayout({authenticationCode, results: postResults}, commentArr){
     document.getElementById("blog-site").removeChild(document.getElementById("loading-note"));
     postResults.forEach((p)=>{
         let el = postLayout(p);
-
         let commentList = sortComments(commentArr, p);
         commentList.forEach(comment=>{
             let commentEl=commentLayout(comment);
+            el.appendChild(commentEl);   
             let commentControls = commentEl.querySelector(".comment-controls");
             if (authenticationCode>0){
                 //also ensure that the comments belong to user, but if admin, all OK
                 commentControls.appendChild(deleteCommentButton());
+                //notice how deleteComment takes no param, but editcommentbtn does...
                 commentControls.appendChild(editCommentButton(commentEl));
             }
-            el.appendChild();   
         })
+        let controls;
         if (authenticationCode>0){
-            let controls = el.querySelector(".post-controls");
+            controls = el.querySelector(".post-controls");
             controls.appendChild(newCommentButton(authenticationCode));
         }      
-        if (authenticationCode>1){
-            document.querySelector("header").appendChild(newPostButton(authenticationCode));
+        if (authenticationCode>1){            
             //include edit button
             controls.appendChild(editPostButton());
             //include delete button
             controls.appendChild(deletePostButton());
         }
-             
-      document.getElementById("blog-site").appendChild(el);
-     });    
+        document.getElementById("blog-site").appendChild(el);
+    });    
+    document.getElementById("header-controls").appendChild(newPostButton(authenticationCode));       
 
 }
 //later, make this only remove edit/delete posts, but not reply
@@ -651,7 +666,8 @@ function removeCommentControls(){
     })
 }
 
-renderPage();
+defaultRenderCall();
+
 </script>
 </body>
 </html>

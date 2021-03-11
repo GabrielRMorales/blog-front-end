@@ -52,6 +52,10 @@ section, .comment {
   padding: 10px;
 }
 
+section > .comment {
+  margin-top: -1px;
+}
+
 #add-post-form, .edit-post-form, .add-comment-form, .edit-comment-form {
   display: -webkit-box;
   display: -ms-flexbox;
@@ -89,6 +93,10 @@ section, .comment {
 
 .post-controls {
   background-color: #b51e3e;
+}
+
+.comment {
+  margin-left: 5%;
 }
 
 .comment-controls {

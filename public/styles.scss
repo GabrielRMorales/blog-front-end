@@ -1,4 +1,4 @@
-%hidden-forms {
+@mixin hidden-forms {
     display: none;
     position: absolute;
     top: 300px;
@@ -23,6 +23,7 @@ header {
     padding: 10px 0;
     margin: 0 10px;
     display: flex;
+    flex-direction: column;
 }
 #blog-site {
     background-color: white;
@@ -30,7 +31,7 @@ header {
   
 }
 #register-or-login-form, #register-form,#login-form {
-    @extend %hidden-forms;
+    @include hidden-forms;
 }
 #logout {
     order: 5;
@@ -45,8 +46,14 @@ button {
         }
 }
 section, .comment {
-    border: 1px solid black;
+    border: 1px solid black;  
     padding: 10px;
+}
+section > .comment {
+    margin-top: -1px;
+}
+#header-forms {
+    padding: 0;
 }
 #add-post-form, .edit-post-form, .add-comment-form, .edit-comment-form {
     display: flex;
@@ -60,6 +67,7 @@ section, .comment {
 #add-post-btn, .edit-post-btn, .add-comment-btn, .edit-comment-btn {
     order: 5;
 }
+
 .post-title {
     margin:10px 0 ;
     font-size: 24px;
@@ -70,6 +78,9 @@ section, .comment {
 }
 .post-controls {
     background-color: $primary-color;
+}
+.comment {
+    margin-left: 5%;
 }
 .comment-controls {
     padding: 10px;
