@@ -3,7 +3,7 @@
     position: absolute;
     top: 300px;
     left: 300px;
-    opacity: .5;
+    background-color: black;
 }
 $primary-color: #b51e3e;
 
@@ -33,9 +33,17 @@ header {
 #register-or-login-form, #register-form,#login-form {
     @include hidden-forms;
 }
-#logout {
+#header-controls {
+    display: flex;
+}
+
+#logout-btn {
     order: 5;
     justify-self: flex-end;
+    display: none;
+}
+#loading-note {
+    font-size: 3em;
 }
 button {   
     padding: 10px;
@@ -52,6 +60,7 @@ section, .comment {
 section > .comment {
     margin-top: -1px;
 }
+
 #header-forms {
     padding: 0;
 }
@@ -64,9 +73,7 @@ section > .comment {
 .close-form {
     align-self: flex-end;
 }
-#add-post-btn, .edit-post-btn, .add-comment-btn, .edit-comment-btn {
-    order: 5;
-}
+
 
 .post-title {
     margin:10px 0 ;
