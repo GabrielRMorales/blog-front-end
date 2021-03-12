@@ -35,6 +35,7 @@ header {
 }
 #header-controls {
     display: flex;
+    justify-content: flex-end;
 }
 
 #logout-btn {

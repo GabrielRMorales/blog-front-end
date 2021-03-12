@@ -11,7 +11,7 @@
     <header>
         <section id="header-controls">
             <button id="logout-btn">Logout</button>
-            <button id="login-btn">Login</button>
+            <button id="login-btn">Login/Register</button>
         </section>
         <section id="header-forms"></section>
     </header>
@@ -58,14 +58,19 @@
 //check that 548 works
 
 //doesn't logout properly-fix all the login stuff
-//the pre-register/login form bugs...ie duplicate forms-see 569 and 507ish
+//the pre-register/login form bugs?
 
 //show errors? see displayError
 
 //style newCommentForm and header
 
 //refactor it as needed-as is, this currently violates DRY...
-
+const appData = {
+            currentUserId: "",
+            authenticationCode: 0,
+            posts: [],
+            comments: []
+        }
 const URL = "http://localhost:3000";
 
      //-GET published posts (shortened)
@@ -257,11 +262,11 @@ const addPostForm=()=>{
     return form;
 }
 //refactor this so it doesn't rely on authenticationCode
-const newPostButton = (authenticationCode)=>{
+const newPostButton = ()=>{
 
     let postButton = document.createElement("button");  
 
-    if (authenticationCode===2) {
+    if (appData.authenticationCode===2) {
         postButton.innerText = "Add New Post";
         postButton.id = "add-new-post";
         postButton.addEventListener("click", function(e){
@@ -287,13 +292,7 @@ const getComments = async (url)=>{
     let commentData = await fetch(url+"/comments");
     return await commentData.json();
 }
-//alter depending on return value of get posts?
-const sortComments = (comments, post)=>{
-    if (comments){
-        return comments.filter(c=>c.post===post._id)
-    }
-    
-}
+
 const editCommentForm = (comment)=>{
     let form = document.createElement("form");
     form.classList.add("edit-comment-form");
@@ -412,9 +411,9 @@ const addCommentForm = (postId)=>{
     
 }
 //refactor this so it doesn't rely on authenticationCode
-const newCommentButton = (authenticationCode=0)=>{
+const newCommentButton = ()=>{
     let commentButton = document.createElement("button");
-    if (authenticationCode>0){
+    if (appData.authenticationCode>0){
         commentButton.innerText = "Reply";
         commentButton.addEventListener("click",function(e){
             let postId=e.target.parentNode.parentNode.id;           
@@ -478,7 +477,10 @@ const commentLayout = (comment)=>{
                 if (data.token){
                     localStorage.setItem("token", data.token);
                     document.getElementById("login-form").style.display = "none";
-
+                    //still need to update part of the DOM, depending on code
+                    document.getElementById("login-btn").style.display = "none";
+                    document.getElementById("logout-btn").style.display= "inline-block";
+                    renderPageLayout();
 
                 } else {
                     document.getElementById("login-errors").innerText = data.message;                    
@@ -512,7 +514,6 @@ const commentLayout = (comment)=>{
                             })                        
                     }
                 } else if (data.success===true){
-                    //delete all values from form or should dom removal delete them?
                     document.getElementById("register-form").style.display = "none";
                     document.getElementById("login-form").style.display = "block";
                     
@@ -546,7 +547,7 @@ const commentLayout = (comment)=>{
             }   
             document.getElementById("logout-btn").style.display="none";
             document.getElementById("login-btn").style.display="inline-block";
-            document.getElementById("add-new-post").innerHTML = newPostButton(0);
+         //   document.getElementById("add-new-post").innerHTML = newPostButton();
             removePostControls();
             removeCommentControls();  
 
@@ -562,67 +563,86 @@ const commentLayout = (comment)=>{
         }
     }
  function getData(path){
-     //needs to differentiate between authentication and no token
-
-    return fetch(URL+path,{
-            method: "GET",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${localStorage.getItem("token")}` || null
+     return fetch(URL+path,{
+         method: "GET",
+         headers: {
+             "Content-Type": "application/json",
+             "Authorization": `Bearer ${localStorage.getItem("token")}` || null
             }
             //data.json returns an unresolved promise, promise.resolve or promise.all would return a resolved promise
             //this resolved prmise can be used
         }).then(data=>data.json());
-}
-
-    //with fetch get a promise back and based on whether the response if true/false, build a certain form
-    
-
-function defaultRenderCall(){
-    let path = localStorage.getItem("token") ? "/posts" : "/";
-    Promise.all([getData(path), getData("/comments")]).then(values=>{      
-        pageLayout(values[0], values[1]);
-        }).catch(err=>console.log(err));
-}
-
-//refactor out authenticationCode
-//also refactor this out to add on items rather than the entire thing-needs for 3 different
-//authentication codes
-function pageLayout({authenticationCode, results: postResults}, commentArr){
-    document.getElementById("blog-site").removeChild(document.getElementById("loading-note"));
-    postResults.forEach((p)=>{
-        let el = postLayout(p);
-        let commentList = sortComments(commentArr, p);
-        commentList.forEach(comment=>{
-            let commentEl=commentLayout(comment);
-            el.appendChild(commentEl);   
-            let commentControls = commentEl.querySelector(".comment-controls");
-            if (authenticationCode>0){
-                //also ensure that the comments belong to user, but if admin, all OK
-                commentControls.appendChild(deleteCommentButton());
-                //notice how deleteComment takes no param, but editcommentbtn does...
-                commentControls.appendChild(editCommentButton(commentEl));
-            }
-        })
-        let controls;
-        if (authenticationCode>0){
-            controls = el.querySelector(".post-controls");
-            controls.appendChild(newCommentButton(authenticationCode));
-        }      
-        if (authenticationCode>1){            
-            //include edit button
-            controls.appendChild(editPostButton());
-            //include delete button
-            controls.appendChild(deletePostButton());
-        }
-        document.getElementById("blog-site").appendChild(el);
-    });    
-    if (authenticationCode>0) {
-        document.getElementById("login-btn").style.display = "none";
-        document.getElementById("logout-btn").style.display = "inline-block";
-        document.getElementById("header-controls").appendChild(newPostButton(authenticationCode));       
     }
+    
+function initialCall(){
+        let path = localStorage.getItem("token") ? "/posts" : "/";
+        Promise.all([getData(path), getData("/comments")]).then(values=>{ 
+            appData.posts = [...values[0].results];
+            appData.authenticationCode = values[0].authenticationCode;  
+            appData.comments = [...values[1]];   
+            appData.currentUserId = values[0].user || null;
+        console.log(appData.authenticationCode);
+        console.log(appData.currentUserId);    
+        console.log(appData.posts);
+        console.log(appData.comments);    
+            renderPageLayout();     
+            }).catch(err=>console.log(err));
 }
+
+    function renderPageLayout(){
+        if (document.getElementById("loading-note")){
+            document.getElementById("blog-site").removeChild(document.getElementById("loading-note"));
+        }
+        if (appData.authenticationCode>=0){
+            appData.posts.forEach(post=>{
+                let postEl = postLayout(post);
+                document.getElementById("blog-site").appendChild(postEl);
+                appData.comments.filter(comment=>comment.post === post._id).forEach(comment=>{
+                    let commentEl = commentLayout(comment);
+                    postEl.appendChild(commentEl);
+                });
+            });
+        }
+         
+        if (appData.authenticationCode>=1){
+            Array.from(document.querySelectorAll(".post-controls")).forEach(controls=>
+                controls.appendChild(newCommentButton())
+            )
+            appData.comments.filter(comment=>{
+                return comment.user._id === appData.currentUserId;
+            }).forEach(comment=>{
+                let controls = document.getElementById(comment._id).querySelector(".comment-controls");
+                //for the properComments add edit/delete button
+                controls.appendChild(editCommentButton());
+                controls.appendChild(deleteCommentButton());
+            });
+        } 
+        if (appData.authenticationCode === 2){
+            //add post controls where user id === post.user.id
+            Array.from(document.querySelectorAll(".post-container")).filter((post, index)=>{
+                return appData.posts[index].user._id === appData.currentUserId;
+            }).forEach(post=>{
+                post.querySelector(".post-controls").appendChild(editPostButton());
+                post.querySelector(".post-controls").appendChild(deletePostButton());
+                post.querySelectorAll(".comment-controls").forEach(controls=>{
+                    if (controls.childNodes.length===0){
+                        controls.appendChild(editCommentButton());
+                        controls.appendChild(deleteCommentButton())
+                    }
+                })
+            });
+        }
+    }  
+    //refactor out authenticationCode
+    //also refactor this out to add on items rather than the entire thing-needs for 3 different
+    //authentication codes
+      
+    
+    //refactor later to use object assign and compositional inheritance
+    
+  
+    //with fetch get a promise back and based on whether the response if true/false, build a certain form
+  
 //later, make this only remove edit/delete posts, but not reply
 //might also need to remove open post/comment forms
 
@@ -642,8 +662,7 @@ function removeCommentControls(){
     })
 }
 
-defaultRenderCall();
-
+initialCall();
 </script>
 </body>
 </html>
