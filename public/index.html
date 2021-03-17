@@ -91,7 +91,7 @@ const deletePostButton = ()=>{
         //remember this needs a confirmation passthrough
         //could be its own deleteButtonForm function
         e.preventDefault();
-        let post =  e.target.parentNode.parentNode;
+        let post = e.target.parentNode.parentNode;
         let btnId = post.id;
         
        fetch(URL+"/posts/delete/"+btnId, 
@@ -235,13 +235,13 @@ const addPostForm=()=>{
                         title: document.getElementById("post-title").value,
                         text: document.getElementById("post-text").value
                     })
-                }).then(data=>data.json())
-                .then(data=>{
+                }).then(data=>{
+                    if (data.ok){
+                        return data.json();
+                    }
+                    throw new Error("There was a problem submitting the post.")
+                }).then(data=>{
                     //if successful, add new post to page and remove #create-post form
-                    if (data.errors){
-                        console.log(data.errors);
-                        console.log(data);
-                    } else if (!data.errors) {
                        let el = postLayout(data);
                        document.getElementById("blog-site").appendChild(el);
                        e.target.parentNode.removeChild(e.target);
@@ -249,11 +249,12 @@ const addPostForm=()=>{
                        controls.appendChild(newCommentButton());
                        controls.appendChild(editPostButton());
                        controls.appendChild(deletePostButton());
-                   }
-
-                    //if failure, add errors to #post-form-errors
+                
                 })
-                .catch(err=>console.log(err));
+                .catch(err=>{
+                    //if failure, add errors to #post-form-errors
+                    document.getElementById("post-form-errors").innerHTML = err;
+                });
             })
             form.querySelector(".close-form").addEventListener("click",function(e){     
                 e.target.parentNode.parentNode.removeChild(e.target.parentNode);
@@ -430,11 +431,10 @@ const newCommentButton = ()=>{
             //add here
         })
     }
-
+    commentButton.classList.add("reply-btn");
     return commentButton;
 
 }
-
 
 const commentLayout = (comment)=>{
     let commContainer = document.createElement("div");
@@ -476,17 +476,21 @@ const commentLayout = (comment)=>{
             .then((data)=>{ 
                 if (data.token){
                     localStorage.setItem("token", data.token);
+                    appData.authenticationCode = data.authenticationCode;
+                    appData.currentUserId = data.user._id;
                     document.getElementById("login-form").style.display = "none";
                     //still need to update part of the DOM, depending on code
                     document.getElementById("login-btn").style.display = "none";
                     document.getElementById("logout-btn").style.display= "inline-block";
-                    renderPageLayout();
+                    console.log(appData);
+                    renderUserLayout();
+                    renderAdminLayout();
 
                 } else {
                     document.getElementById("login-errors").innerText = data.message;                    
                 }            
                 
-            }).catch(err=>console.error('There has been a problem with your fetch operation:', err));
+            }).catch(err=>console.error('There has been a problem with your login:', err));
 
         });
 
@@ -547,7 +551,7 @@ const commentLayout = (comment)=>{
             }   
             document.getElementById("logout-btn").style.display="none";
             document.getElementById("login-btn").style.display="inline-block";
-         //   document.getElementById("add-new-post").innerHTML = newPostButton();
+            document.getElementById("add-new-post").innerHTML = newPostButton();
             removePostControls();
             removeCommentControls();  
 
@@ -589,12 +593,9 @@ function initialCall(){
             }).catch(err=>console.log(err));
 }
 
-    function renderPageLayout(){
-        if (document.getElementById("loading-note")){
-            document.getElementById("blog-site").removeChild(document.getElementById("loading-note"));
-        }
-        if (appData.authenticationCode>=0){
-            appData.posts.forEach(post=>{
+//refactor this, make it modular, otherwise, every login will call the initial gains
+function renderBasicLayout(){
+     appData.posts.forEach(post=>{
                 let postEl = postLayout(post);
                 document.getElementById("blog-site").appendChild(postEl);
                 appData.comments.filter(comment=>comment.post === post._id).forEach(comment=>{
@@ -602,37 +603,68 @@ function initialCall(){
                     postEl.appendChild(commentEl);
                 });
             });
-        }
-         
-        if (appData.authenticationCode>=1){
-            Array.from(document.querySelectorAll(".post-controls")).forEach(controls=>
-                controls.appendChild(newCommentButton())
-            )
-            appData.comments.filter(comment=>{
-                return comment.user._id === appData.currentUserId;
-            }).forEach(comment=>{
-                let controls = document.getElementById(comment._id).querySelector(".comment-controls");
-                //for the properComments add edit/delete button
-                controls.appendChild(editCommentButton());
-                controls.appendChild(deleteCommentButton());
-            });
-        } 
-        if (appData.authenticationCode === 2){
-            //add post controls where user id === post.user.id
-            Array.from(document.querySelectorAll(".post-container")).filter((post, index)=>{
-                return appData.posts[index].user._id === appData.currentUserId;
-            }).forEach(post=>{
-                post.querySelector(".post-controls").appendChild(editPostButton());
-                post.querySelector(".post-controls").appendChild(deletePostButton());
-                post.querySelectorAll(".comment-controls").forEach(controls=>{
-                    if (controls.childNodes.length===0){
-                        controls.appendChild(editCommentButton());
-                        controls.appendChild(deleteCommentButton())
-                    }
-                })
-            });
-        }
-    }  
+}
+function renderUserLayout(){
+    let logoutButton = document.getElementById("logout-btn").style.display;
+    Array.from(document.querySelectorAll(".post-controls")).forEach(controls=>{
+                        if (!controls.querySelector(".reply-btn")){
+                            controls.appendChild(newCommentButton());
+                        }                   
+                    })
+                let commentArr = appData.comments.filter(comment=>{
+                    console.log(`comment ${comment}`)
+                    //the big issue is that the comments call still gets comments whose posts were deleted
+                    return comment.user._id === appData.currentUserId && document.getElementById(comment.post)!==null;
+                }).forEach(comment=>{                    
+                    let controls = document.getElementById(comment._id).querySelector(".comment-controls");
+                    //for the properComments add edit/delete button
+                    console.log(`controls ${controls}`)
+                    controls.appendChild(editCommentButton(comment));
+                    controls.appendChild(deleteCommentButton());
+                });
+            
+            if (document.getElementById("login-btn").style.display!="none" ){
+                document.getElementById("login-btn").style.display="none";
+            } 
+            if (!document.getElementById("logout-btn").style.display){
+                document.getElementById("logout-btn").style.display="inline-block";
+            }
+}
+function renderAdminLayout(){
+    //add post controls where user id === post.user.id
+                Array.from(document.querySelectorAll(".post-container")).filter((post, index)=>{
+                    console.log(`post inside filter ${post}, index ${index})`);
+                    return appData.posts[index].user === appData.currentUserId;
+                }).forEach(post=>{                   
+                    post.querySelector(".post-controls").appendChild(editPostButton());
+                    post.querySelector(".post-controls").appendChild(deletePostButton());
+                    post.querySelectorAll(".comment-controls").forEach(controls=>{
+                        if (controls.childNodes.length===0){
+                            controls.appendChild(editCommentButton(controls.parentNode));
+                            controls.appendChild(deleteCommentButton())
+                        }
+                    })
+                });
+
+                document.getElementById("header-controls").appendChild(newPostButton());
+}
+
+function renderPageLayout(){
+    if (document.getElementById("loading-note")){
+        document.getElementById("blog-site").removeChild(document.getElementById("loading-note"));
+    }       
+    if (appData.authenticationCode>=0){
+        renderBasicLayout();
+    }
+     
+    if (appData.authenticationCode>=1){
+        renderUserLayout();
+       
+    } 
+    if (appData.authenticationCode === 2){
+        renderAdminLayout();
+    }
+}  
     //refactor out authenticationCode
     //also refactor this out to add on items rather than the entire thing-needs for 3 different
     //authentication codes
