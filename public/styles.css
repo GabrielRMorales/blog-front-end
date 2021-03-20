@@ -1,12 +1,13 @@
 body {
   margin: 0;
   padding: 0;
-  background-color: #b51e3e;
+  background-color: #d1d1b9ee;
 }
 
 body, button, input, textarea {
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: Georgia, 'Times New Roman', Times, serif;
   font-size: 15px;
+  color: #494941;
 }
 
 header {
@@ -21,9 +22,19 @@ header {
           flex-direction: column;
 }
 
+header #header-controls {
+  display: -webkit-box;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-box-pack: end;
+      -ms-flex-pack: end;
+          justify-content: flex-end;
+}
+
 #blog-site {
-  background-color: white;
+  background-color: #f5f5dc;
   margin: 0 10px;
+  border-radius: 4px;
 }
 
 #register-or-login-form, #register-form, #login-form {
@@ -31,16 +42,7 @@ header {
   position: absolute;
   top: 300px;
   left: 300px;
-  background-color: black;
-}
-
-#header-controls {
-  display: -webkit-box;
-  display: -ms-flexbox;
-  display: flex;
-  -webkit-box-pack: end;
-      -ms-flex-pack: end;
-          justify-content: flex-end;
+  background-color: #8d8d7e;
 }
 
 #logout-btn {
@@ -58,16 +60,20 @@ header {
 button {
   padding: 10px;
   font-weight: bold;
+  background-color: #d1d1b9ee;
+  border: none;
 }
 
 button:hover {
-  background-color: #3b3b3b;
-  color: white;
+  text-decoration: underline;
 }
 
 section, .comment {
-  border: 1px solid black;
   padding: 10px;
+}
+
+section .comment, .comment .comment {
+  margin-left: 5%;
 }
 
 section > .comment {
@@ -108,20 +114,25 @@ section > .comment {
 }
 
 .post-controls {
-  background-color: #b51e3e;
-}
-
-.comment {
-  margin-left: 5%;
+  background-color: #d1d1b9ee;
+  border-radius: 4px;
 }
 
 .comment-controls {
   padding: 10px;
-  background-color: #b51e3e;
+  background-color: #d1d1b9ee;
+  border-radius: 4px;
 }
 
 .comment-data {
-  color: #b51e3e;
+  color: #3d3d37;
   font-weight: bold;
+}
+
+@media (max-width: 420px) {
+  section > .comment {
+    padding-left: 0;
+    margin-left: 0;
+  }
 }
 /*# sourceMappingURL=styles.css.map */

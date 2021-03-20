@@ -87,26 +87,24 @@ const deletePostButton = ()=>{
     let btn = document.createElement("button");
     btn.className = "delete-post-btn";
     btn.innerText = "Delete Post";
-    btn.addEventListener("click",function(e){
+    btn.addEventListener("click", async function(e){
         //remember this needs a confirmation passthrough
         //could be its own deleteButtonForm function
         e.preventDefault();
         let post = e.target.parentNode.parentNode;
         let btnId = post.id;
         
-       fetch(URL+"/posts/delete/"+btnId, 
+       let data = await fetch(URL+"/posts/delete/"+btnId, 
         {method: "DELETE",
         headers: {
             "Authorization": `Bearer ${localStorage.getItem("token")}`
         }
-        }).then(data=>data.json())
-        .then(data=>{
-            if (data.deleted===true){
-                //delete from page
+        });
+        data = await data.json();
+        if (data.deleted===true){
                 post.parentNode.removeChild(post);
             }
-        });
-
+    
     });
     return btn;
 }
@@ -169,7 +167,7 @@ const editPostButton = ()=>{
             targetEl.querySelector(".post-controls").appendChild(editPostForm(title, text, published));
         }
        
-        targetEl.querySelector(".edit-post-form").addEventListener("submit",function(e){
+        targetEl.querySelector(".edit-post-form").addEventListener("submit",async function(e){
             e.preventDefault();
             //close form
             //send put request
@@ -184,29 +182,33 @@ const editPostButton = ()=>{
             }
            // let published = targetEl.querySelector("input[name='post-status']:checked").checked.value;
             let postId = e.target.parentNode.parentNode.id;
-           fetch(URL+"/posts/edit/"+postId, {
-                method: "PUT",
-                headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${localStorage.getItem("token")}` },
-                body: JSON.stringify({ title, text, published})
-            }).then(data=>data.json())
-            .then(data=>{
-                //if err send back
-                console.log(data);
-                //figure this out!
-               /* if (data.errors || data.error) {
-                     targetEl.querySelector(".edit-post-form").appendChild(displayError(data.errors || data.error));
-                }
-               else if (!data.errors || !data.error){*/
+           let data;
+            try {
+                data = await fetch(URL+"/posts/edit/"+postId, {
+                    method: "PUT",
+                    headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${localStorage.getItem("token")}` },
+                    body: JSON.stringify({ title, text, published})
+                });                
+                
+                data = await new Promise(async function(resolve,reject){
+                    if (data.ok){
+                        resolve(await data.json());
+                    } else {
+                        reject(data);
+                    }
+                });
                     //update post DOM
                     targetEl.querySelector(".post-title").innerText = data.title;
                     targetEl.querySelector(".post-text").innerText = data.text;
                     targetEl.querySelector(".post-status").innerText = data.published ? "published" : "unpublished";
-                    targetEl.querySelector(".post-controls").removeChild(targetEl.querySelector(".edit-post-form"))
-              return data;
-
-            }).catch(err=>console.log(err));
+                    targetEl.querySelector(".post-controls").removeChild(targetEl.querySelector(".edit-post-form"));
+            
+            }
+            catch (err){
+               console.log(err);
+            }
                         
         })
     });
@@ -222,25 +224,28 @@ const addPostForm=()=>{
            form.id="add-post-form";  
            form.innerHTML+='<div class="close-form">X</div><div id="post-form-errors"></div><label for="post-title">Title:</label><input type="text" id="post-title" name="title" /><button type="submit" id="add-post-btn">Post</button><textarea id="post-text" name="text" form="add-post-form" />';
 
-           form.addEventListener("submit",function(e){
+           form.addEventListener("submit",async function(e){
                 e.preventDefault();
                 //fetch post request to /posts using form id data
-                fetch(URL+"/posts", {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        "Authorization": `Bearer ${localStorage.getItem("token")}`
-                    },
-                    body: JSON.stringify({
-                        title: document.getElementById("post-title").value,
-                        text: document.getElementById("post-text").value
-                    })
-                }).then(data=>{
-                    if (data.ok){
-                        return data.json();
-                    }
-                    throw new Error("There was a problem submitting the post.")
-                }).then(data=>{
+                let data;
+                try {
+                    data = await fetch(URL+"/posts", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "Authorization": `Bearer ${localStorage.getItem("token")}`
+                        },
+                        body: JSON.stringify({
+                            title: document.getElementById("post-title").value,
+                            text: document.getElementById("post-text").value
+                        })
+                    });
+                    data = await new Promise(async (resolve,reject)=>{
+                        if (data.ok){
+                            return await (data.json());
+                        }
+                        throw new Error("There was a problem submitting the post.")
+                    });
                     //if successful, add new post to page and remove #create-post form
                        let el = postLayout(data);
                        document.getElementById("blog-site").appendChild(el);
@@ -249,12 +254,11 @@ const addPostForm=()=>{
                        controls.appendChild(newCommentButton());
                        controls.appendChild(editPostButton());
                        controls.appendChild(deletePostButton());
-                
-                })
-                .catch(err=>{
+                }
+                catch (err){
                     //if failure, add errors to #post-form-errors
                     document.getElementById("post-form-errors").innerHTML = err;
-                });
+                }
             })
             form.querySelector(".close-form").addEventListener("click",function(e){     
                 e.target.parentNode.parentNode.removeChild(e.target.parentNode);
@@ -301,32 +305,32 @@ const editCommentForm = (comment)=>{
     let commentText = comment.querySelector(".comment-text").innerText;
     form.innerHTML+=`<div class="close-form">X</div><button type='submit' class="edit-comment-btn">Update Comment</button><textarea id='${comment.id}-edit-text' name='edit-comment-text' className='edit-comment-form' >${comment.querySelector(".comment-text").innerText}</textarea>`
   
-    form.addEventListener("submit", function(e){
+    form.addEventListener("submit", async function(e){
         e.preventDefault();
-        console.log();
         let newInput = document.getElementById(`${comment.id}-edit-text`).value;
 
-        fetch(URL+"/comments/edit/"+comment.id, {
-            method: "PUT",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${localStorage.getItem("token")}`
-            },
-            body: JSON.stringify({
-                text: newInput,
-                post: document.getElementById(comment.id).parentNode.parentNode.id
-            })
-       
-        }).then(data=>data.json()) 
-            .then(data=>{console.log(data)           
-            let prevComment = document.getElementById(comment.id);
-            prevComment.querySelector(".comment-text").innerText=data.text;
-            prevComment.querySelector(".comment-controls").removeChild(form);
-        
-            })
-            .catch(err=>{console.log(err)
+        let data;
+            try {
+                data = await fetch(URL+"/comments/edit/"+comment.id, {
+                    method: "PUT",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${localStorage.getItem("token")}`
+                    },
+                    body: JSON.stringify({
+                        text: newInput,
+                        post: document.getElementById(comment.id).parentNode.parentNode.id
+                    })
+               
+                });
+                data = await data.json();
+                let prevComment = document.getElementById(comment.id);
+                prevComment.querySelector(".comment-text").innerText=data.text;                prevComment.querySelector(".comment-controls").removeChild(form);
+
+            } catch(err){
                 form.appendChild("There was an error!");
-            });        
+            }       
+           
 
     })
     form.querySelector(".close-form").addEventListener("click",function(e){             
@@ -353,22 +357,25 @@ const editCommentButton = (comment)=>{
 const deleteCommentButton = ()=>{
     let btn = document.createElement("button");
     btn.innerHTML="Delete this comment";
-    btn.addEventListener("click", function(e){
+    btn.addEventListener("click", async function(e){
         commentId=e.target.parentNode.parentNode.id;
         //fetch delete request
-        fetch(URL+"/comments/delete/"+commentId,{
-            method: "DELETE",
-            headers: {
-                "Authorization": `Bearer ${localStorage.getItem("token")}`
-            }
-        }).then(data=>data.json())
-        .then(data=>{
-            if (data.deleted===true){
-                let el=document.getElementById(commentId)
-                el.parentNode.removeChild(el);
-            }
-        })
-        .catch(err=>console.log(err));
+        let data;
+        try {
+            data = await fetch(URL+"/comments/delete/"+commentId,{
+                method: "DELETE",
+                headers: {
+                    "Authorization": `Bearer ${localStorage.getItem("token")}`
+                }
+            });
+           data = await data.json();
+                if (data.deleted===true){
+                    let el=document.getElementById(commentId)
+                    el.parentNode.removeChild(el);
+                }
+        } catch(err){
+            console.log(err);
+        }
 
     });
     return btn;
@@ -379,29 +386,32 @@ const addCommentForm = (postId)=>{
     form.classList.add("add-comment-form")
     form.innerHTML+=`<div class="close-form">X</div><button type='submit' class="add-comment-btn">Add Comment</button><textarea id='${postId}-comment' name='commentText' />`
     
-    form.addEventListener("submit", function(e){
+    form.addEventListener("submit", async function(e){
         e.preventDefault();                
-        fetch(URL+"/comments", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${localStorage.getItem("token")}`
-            },
-            body: JSON.stringify({
-                text: document.getElementById(postId+"-comment").value,
-                postId: postId
-            })
-        }).then(data=>data.json())
-        .then(comment=>{
+        let data;
+        try {
+            data = await fetch(URL+"/comments", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${localStorage.getItem("token")}`
+                },
+                body: JSON.stringify({
+                    text: document.getElementById(postId+"-comment").value,
+                    postId: postId
+                })
+            });
+            let comment = await data.json();
             let newComment=commentLayout(comment);
-            form.parentNode.appendChild(newComment);
-            form.parentNode.removeChild(form); 
-            newComment.querySelector(".comment-controls").appendChild(deleteCommentButton());
-            //notice how deleteComment takes no param, but this does...
-            newComment.querySelector(".comment-controls").appendChild(editCommentButton(newComment));
-               
-        })
-        .catch(err=>console.log(err));
+                form.parentNode.appendChild(newComment);
+                form.parentNode.removeChild(form);
+                console.log(newComment);
+                newComment.querySelector(".comment-controls").appendChild(deleteCommentButton());
+                //notice how deleteComment takes no param, but this does...
+                newComment.querySelector(".comment-controls").appendChild(editCommentButton(newComment));
+       } catch(err){
+            console.log(err);
+        }
         
     })
     //addCommentForm also needs a close button to cancel
@@ -447,7 +457,7 @@ const commentLayout = (comment)=>{
 }
 //set Event listeners
 //make thse into a single configurable function-OR set the close-form class to close-display none
-        document.getElementById("login-btn").addEventListener("click",function(){
+        document.getElementById("login-btn").addEventListener("click",async function(){
             document.getElementById("register-or-login-form").style.display="block";
         })        
         document.getElementById("close-register-login").addEventListener("click",function(){
@@ -461,23 +471,25 @@ const commentLayout = (comment)=>{
         });
      
         //set eventlistener for register/login form-should send fetch request
-        document.getElementById("login-form").addEventListener("submit",function(e){
+        document.getElementById("login-form").addEventListener("submit",async function(e){
             e.preventDefault();
-           fetch(URL+"/login", {
-                method: "POST",
-                headers: {
-                    'Content-Type': 'application/json'
-                },          
-                body: JSON.stringify({
-                    username: document.getElementById("username-login").value,
-                    password: document.getElementById("password-login").value
-                })
-            }).then(data=>data.json())
-            .then((data)=>{ 
-                if (data.token){
-                    localStorage.setItem("token", data.token);
-                    appData.authenticationCode = data.authenticationCode;
-                    appData.currentUserId = data.user._id;
+            let fetchedData;
+            try {
+                fetchedData = await fetch(URL+"/login", {
+                     method: "POST",
+                     headers: {
+                         'Content-Type': 'application/json'
+                     },          
+                     body: JSON.stringify({
+                         username: document.getElementById("username-login").value,
+                         password: document.getElementById("password-login").value
+                     })
+                 })
+                fetchedData = await data.json();
+                if (fetchedData.token){
+                    localStorage.setItem("token", fetchedData.token);
+                    appData.authenticationCode = fetchedData.authenticationCode;
+                    appData.currentUserId = fetchedData.user._id;
                     document.getElementById("login-form").style.display = "none";
                     //still need to update part of the DOM, depending on code
                     document.getElementById("login-btn").style.display = "none";
@@ -487,28 +499,31 @@ const commentLayout = (comment)=>{
                     renderAdminLayout();
 
                 } else {
-                    document.getElementById("login-errors").innerText = data.message;                    
+                    document.getElementById("login-errors").innerText = fetchedData.message;                    
                 }            
-                
-            }).catch(err=>console.error('There has been a problem with your login:', err));
 
+            } catch(err) {
+                console.error('There has been a problem with your login:', err)
+            }
         });
 
-        document.getElementById("register-form").addEventListener("submit",function(e){
+        document.getElementById("register-form").addEventListener("submit",async function(e){
             e.preventDefault();
-            fetch(URL + "/register", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({
-                    username: document.getElementById("username-register").value,
-                    usertag: document.getElementById("usertag-register").value,
-                    password: document.getElementById("password-register").value,
-                    password2: document.getElementById("password2-register").value
+            let data;
+            try {
+                data = await fetch(URL + "/register", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        username: document.getElementById("username-register").value,
+                        usertag: document.getElementById("usertag-register").value,
+                        password: document.getElementById("password-register").value,
+                        password2: document.getElementById("password2-register").value
+                    })
                 })
-            }).then(data=>data.json())
-            .then(data=>{
+                data = await data.json();
                 if (!data.success){
                     let messages = document.getElementById("register-errors");
                     messages.innerHTML="<p>Errors:</p>";
@@ -519,18 +534,17 @@ const commentLayout = (comment)=>{
                     }
                 } else if (data.success===true){
                     document.getElementById("register-form").style.display = "none";
-                    document.getElementById("login-form").style.display = "block";
-                    
+                    document.getElementById("login-form").style.display = "block";                    
                 }
-            })
-            .catch(err=>console.error('There has been a problem with your fetch operation:', err));
-
+            } catch(err){
+                console.error('There has been a problem with your fetch operation:', err);
+            }
         })
 
     document.getElementById("register-or-login-form").addEventListener("submit",async function(e){
             e.preventDefault();
             //change to params:id
-            let username=document.getElementById("username-register-or-login").value
+            let username=document.getElementById("username-register-or-login").value;
             try {
                 let data = await fetch(URL+"/register/"+username);
                 data = await data.json();
@@ -542,21 +556,26 @@ const commentLayout = (comment)=>{
            }
             
     });
-   document.getElementById("logout-btn").addEventListener("click",(e)=>{
-       fetch(URL+"/logout").then(data=>{
-        //should remove token and remove controls
-            if (localStorage.getItem("token")){
-                localStorage.removeItem("token");
-                //could include a blacklist for security to prevent tokens from being reused
-            }   
-            document.getElementById("logout-btn").style.display="none";
-            document.getElementById("login-btn").style.display="inline-block";
-            document.getElementById("add-new-post").innerHTML = newPostButton();
-            removePostControls();
-            removeCommentControls();  
+   document.getElementById("logout-btn").addEventListener("click",async (e)=>{
+       let data;
+        try {
+           data = await fetch(URL+"/logout");
+           data = await data.json();
+           if (localStorage.getItem("token")){
+               localStorage.removeItem("token");
+               //could include a blacklist for security to prevent tokens from being reused
+           }   
+           document.getElementById("logout-btn").style.display="none";
+           document.getElementById("login-btn").style.display="inline-block";
+           document.getElementById("add-new-post").innerHTML = newPostButton();
+           removePostControls();
+           removeCommentControls();
+        } catch (e){
+            console.log(error);
+        }
+       
+   });
 
-       })
-   })
     function setNewForm({registered}){
         if (registered){
             document.getElementById("register-or-login-form").style.display = "none";
@@ -566,31 +585,38 @@ const commentLayout = (comment)=>{
             document.getElementById("register-form").style.display = "block";
         }
     }
- function getData(path){
-     return fetch(URL+path,{
+ async function getData(path){
+    let fetchedData;
+    try {
+         fetchedData = await fetch(URL+path,{
          method: "GET",
          headers: {
              "Content-Type": "application/json",
              "Authorization": `Bearer ${localStorage.getItem("token")}` || null
-            }
+         }
+         });
             //data.json returns an unresolved promise, promise.resolve or promise.all would return a resolved promise
-            //this resolved prmise can be used
-        }).then(data=>data.json());
+            //this resolved prmise can be used     
+        return await fetchedData.json();
+    } catch(err){
+        console.log(err);
     }
+ }
     
-function initialCall(){
+async function initialCall(){
         let path = localStorage.getItem("token") ? "/posts" : "/";
-        Promise.all([getData(path), getData("/comments")]).then(values=>{ 
+        let values;
+        try {
+            values = await Promise.all([getData(path), getData("/comments")]);         
             appData.posts = [...values[0].results];
             appData.authenticationCode = values[0].authenticationCode;  
             appData.comments = [...values[1]];   
             appData.currentUserId = values[0].user || null;
-        console.log(appData.authenticationCode);
-        console.log(appData.currentUserId);    
-        console.log(appData.posts);
-        console.log(appData.comments);    
             renderPageLayout();     
-            }).catch(err=>console.log(err));
+         }
+         catch(err){
+                console.log(err);     
+            }
 }
 
 //refactor this, make it modular, otherwise, every login will call the initial gains
@@ -612,14 +638,15 @@ function renderUserLayout(){
                         }                   
                     })
                 let commentArr = appData.comments.filter(comment=>{
-                    console.log(`comment ${comment}`)
+                  
                     //the big issue is that the comments call still gets comments whose posts were deleted
                     return comment.user._id === appData.currentUserId && document.getElementById(comment.post)!==null;
                 }).forEach(comment=>{                    
                     let controls = document.getElementById(comment._id).querySelector(".comment-controls");
                     //for the properComments add edit/delete button
                     console.log(`controls ${controls}`)
-                    controls.appendChild(editCommentButton(comment));
+                    console.log(`comment ${comment}`)
+                    controls.appendChild(editCommentButton(controls.parentNode));
                     controls.appendChild(deleteCommentButton());
                 });
             
@@ -639,6 +666,7 @@ function renderAdminLayout(){
                     post.querySelector(".post-controls").appendChild(editPostButton());
                     post.querySelector(".post-controls").appendChild(deletePostButton());
                     post.querySelectorAll(".comment-controls").forEach(controls=>{
+                        console.log(controls.parentNode);
                         if (controls.childNodes.length===0){
                             controls.appendChild(editCommentButton(controls.parentNode));
                             controls.appendChild(deleteCommentButton())
