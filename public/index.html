@@ -192,13 +192,12 @@ const editPostButton = ()=>{
                     body: JSON.stringify({ title, text, published})
                 });                
                 
-                data = await new Promise(async function(resolve,reject){
+                data = await (function(){
                     if (data.ok){
-                        resolve(await data.json());
-                    } else {
-                        reject(data);
+                        return data.json()
                     }
-                });
+                    throw new Error("There was a problem updating the post");
+                })();
                     //update post DOM
                     targetEl.querySelector(".post-title").innerText = data.title;
                     targetEl.querySelector(".post-text").innerText = data.text;
@@ -240,12 +239,11 @@ const addPostForm=()=>{
                             text: document.getElementById("post-text").value
                         })
                     });
-                    data = await new Promise(async (resolve,reject)=>{
-                        if (data.ok){
-                            return await (data.json());
-                        }
-                        throw new Error("There was a problem submitting the post.")
-                    });
+                    if (data.ok){
+                        data = await data.json();
+                    } else {
+                        throw new Error("There was a problem submitting the post.");
+                    }
                     //if successful, add new post to page and remove #create-post form
                        let el = postLayout(data);
                        document.getElementById("blog-site").appendChild(el);
@@ -325,7 +323,8 @@ const editCommentForm = (comment)=>{
                 });
                 data = await data.json();
                 let prevComment = document.getElementById(comment.id);
-                prevComment.querySelector(".comment-text").innerText=data.text;                prevComment.querySelector(".comment-controls").removeChild(form);
+                prevComment.querySelector(".comment-text").innerText=data.text;
+                prevComment.querySelector(".comment-controls").removeChild(form);
 
             } catch(err){
                 form.appendChild("There was an error!");
@@ -520,7 +519,8 @@ const commentLayout = (comment)=>{
                         username: document.getElementById("username-register").value,
                         usertag: document.getElementById("usertag-register").value,
                         password: document.getElementById("password-register").value,
-                        password2: document.getElementById("password2-register").value
+                        password2: document.getElementById("password2-register").value,
+                        admin: true
                     })
                 })
                 data = await data.json();
